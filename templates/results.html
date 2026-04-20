@@ -22,9 +22,22 @@
         <input type="hidden" name="tech_stack" value="{{ config.tech_stack | join(', ') }}">
         {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
         <input type="hidden" name="page" value="{{ page - 1 }}">
+        <input type="hidden" name="page_size" value="{{ page_size }}">
         <button type="submit" class="btn-page">← Föregående</button>
       </form>
       {% endif %}
+
+      <form method="post" action="/search" style="display:inline">
+        <input type="hidden" name="city" value="{{ config.city }}">
+        <input type="hidden" name="tech_stack" value="{{ config.tech_stack | join(', ') }}">
+        {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
+        <input type="hidden" name="page" value="1">
+        <select name="page_size" class="select-page-size" onchange="this.form.submit()">
+          {% for size in [5, 10, 25, 50, 100] %}
+          <option value="{{ size }}" {% if size == page_size %}selected{% endif %}>{{ size }} per sida</option>
+          {% endfor %}
+        </select>
+      </form>
 
       {% if page * page_size < total %}
       <form method="post" action="/search" style="display:inline">
@@ -32,6 +45,7 @@
         <input type="hidden" name="tech_stack" value="{{ config.tech_stack | join(', ') }}">
         {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
         <input type="hidden" name="page" value="{{ page + 1 }}">
+        <input type="hidden" name="page_size" value="{{ page_size }}">
         <button type="submit" class="btn-page">Nästa →</button>
       </form>
       {% endif %}

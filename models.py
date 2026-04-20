@@ -8,6 +8,7 @@ class SearchConfig(BaseModel):
     all_sweden: bool = False
     program_url: str | None = None
     page: int = 1
+    page_size: int = 10
 
 
 class CompanyRaw(BaseModel):

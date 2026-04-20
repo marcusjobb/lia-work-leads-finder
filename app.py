@@ -29,7 +29,7 @@ async def search(request: Request):
 
     indeed_results, af_result = await asyncio.gather(
         scrape_indeed(config.tech_stack, config.city, config.all_sweden),
-        scrape_af(config.tech_stack, config.city, config.all_sweden, page=config.page),
+        scrape_af(config.tech_stack, config.city, config.all_sweden, page=config.page, page_size=config.page_size),
     )
     af_companies, total_af = af_result
 
@@ -53,7 +53,7 @@ async def search(request: Request):
             "config": config,
             "total": total_af,
             "page": config.page,
-            "page_size": PAGE_SIZE,
+            "page_size": config.page_size,
         },
     )
 

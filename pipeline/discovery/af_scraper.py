@@ -12,7 +12,8 @@ PAGE_SIZE = 10
 
 
 async def scrape_af(
-    tech_stack: list[str], city: str, all_sweden: bool = False, page: int = 1
+    tech_stack: list[str], city: str, all_sweden: bool = False, page: int = 1,
+    page_size: int = PAGE_SIZE,
 ) -> tuple[list[CompanyRaw], int]:
     """Search Arbetsförmedlingen JobSearch API. Returns (companies, total_hits)."""
     query_parts = tech_stack[:3]
@@ -21,8 +22,8 @@ async def scrape_af(
 
     params = {
         "q": " ".join(query_parts),
-        "offset": (page - 1) * PAGE_SIZE,
-        "limit": PAGE_SIZE,
+        "offset": (page - 1) * page_size,
+        "limit": page_size,
     }
 
     try:
