@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
 from pipeline.discovery.indeed import scrape_indeed
 
@@ -8,15 +8,25 @@ FIXTURE = (Path(__file__).parent / "fixtures" / "indeed_results.html").read_text
 
 @pytest.mark.asyncio
 async def test_scrape_returns_companies():
-    mock_response = MagicMock()
-    mock_response.text = FIXTURE
-    mock_response.raise_for_status = MagicMock()
+    mock_page = AsyncMock()
+    mock_page.content = AsyncMock(return_value=FIXTURE)
+    mock_page.goto = AsyncMock()
+    mock_page.set_extra_http_headers = AsyncMock()
+    mock_page.wait_for_timeout = AsyncMock()
 
-    with patch("pipeline.discovery.indeed.httpx.AsyncClient") as mock_client:
-        mock_client.return_value.__aenter__ = AsyncMock(return_value=MagicMock(
-            get=AsyncMock(return_value=mock_response)
-        ))
-        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+    mock_browser = AsyncMock()
+    mock_browser.new_page = AsyncMock(return_value=mock_page)
+    mock_browser.close = AsyncMock()
+
+    mock_chromium = AsyncMock()
+    mock_chromium.launch = AsyncMock(return_value=mock_browser)
+
+    mock_playwright = AsyncMock()
+    mock_playwright.chromium = mock_chromium
+    mock_playwright.__aenter__ = AsyncMock(return_value=mock_playwright)
+    mock_playwright.__aexit__ = AsyncMock(return_value=False)
+
+    with patch("pipeline.discovery.indeed.async_playwright", return_value=mock_playwright):
         results = await scrape_indeed(["Java", "Spring Boot"], "Göteborg")
 
     assert len(results) == 2
@@ -28,11 +38,11 @@ async def test_scrape_returns_companies():
 
 @pytest.mark.asyncio
 async def test_scrape_empty_on_error():
-    with patch("pipeline.discovery.indeed.httpx.AsyncClient") as mock_client:
-        mock_client.return_value.__aenter__ = AsyncMock(return_value=MagicMock(
-            get=AsyncMock(side_effect=Exception("network error"))
-        ))
-        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+    mock_playwright = AsyncMock()
+    mock_playwright.__aenter__ = AsyncMock(side_effect=Exception("playwright error"))
+    mock_playwright.__aexit__ = AsyncMock(return_value=False)
+
+    with patch("pipeline.discovery.indeed.async_playwright", return_value=mock_playwright):
         results = await scrape_indeed(["Java"], "Göteborg")
 
     assert results == []

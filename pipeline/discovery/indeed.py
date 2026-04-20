@@ -1,26 +1,18 @@
 import logging
 from urllib.parse import quote_plus
 
-import httpx
 from bs4 import BeautifulSoup
+from playwright.async_api import async_playwright
 
 from models import CompanyRaw
 
 logger = logging.getLogger(__name__)
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-    ),
-    "Accept-Language": "sv-SE,sv;q=0.9,en;q=0.8",
-}
-
 
 async def scrape_indeed(
     tech_stack: list[str], city: str, all_sweden: bool = False
 ) -> list[CompanyRaw]:
-    """Scrape Indeed.se job listings → list[CompanyRaw]. Returns [] on error."""
+    """Scrape Indeed.se via Playwright → list[CompanyRaw]. Returns [] on error."""
     query = " ".join(tech_stack[:3])
     location = "" if all_sweden else city
     url = (
@@ -29,12 +21,18 @@ async def scrape_indeed(
     )
 
     try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
-            response = await client.get(url, headers=HEADERS)
-            response.raise_for_status()
-        html = response.text
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_extra_http_headers({
+                "Accept-Language": "sv-SE,sv;q=0.9,en;q=0.8",
+            })
+            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+            await page.wait_for_timeout(2000)
+            html = await page.content()
+            await browser.close()
     except Exception as exc:
-        logger.warning("Indeed scrape failed: %s", exc)
+        logger.warning("Indeed Playwright scrape failed: %s", exc)
         return []
 
     try:
