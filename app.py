@@ -8,7 +8,7 @@ from fastapi.templating import Jinja2Templates
 from models import SearchConfig
 from pipeline.init import parse_config
 from pipeline.discovery.indeed import scrape_indeed
-from pipeline.discovery.af_scraper import scrape_af
+from pipeline.discovery.af_scraper import scrape_af, PAGE_SIZE
 from pipeline.integration import build_profile
 from pipeline.validators.relevance import is_relevant
 
@@ -53,7 +53,7 @@ async def search(request: Request):
             "config": config,
             "total": total_af,
             "page": config.page,
-            "page_size": 10,
+            "page_size": PAGE_SIZE,
         },
     )
 
