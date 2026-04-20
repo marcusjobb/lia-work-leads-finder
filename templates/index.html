@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LIA Leads Finder</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <h1>LIA Leads Finder</h1>
+    <p class="subtitle">Hitta LIA-företag som matchar din tech stack</p>
+    <form method="post" action="/search" class="search-form">
+      <label for="city">Stad</label>
+      <input type="text" id="city" name="city" placeholder="t.ex. Göteborg" required>
+
+      <label for="tech_stack">Tech stack <small>(kommaseparerat)</small></label>
+      <input type="text" id="tech_stack" name="tech_stack" placeholder="t.ex. Java, Spring Boot" required>
+
+      <label class="checkbox-label">
+        <input type="checkbox" name="all_sweden"> Sök i hela Sverige
+      </label>
+
+      <button type="submit" id="submit-btn">
+        <span id="btn-text">Hitta LIA-företag</span>
+        <span id="btn-spinner" hidden>
+          <svg class="spinner" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-dashoffset="10"/>
+          </svg>
+          Söker…
+        </span>
+      </button>
+    </form>
+  </main>
+  <script>
+    document.querySelector('.search-form').addEventListener('submit', function() {
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      document.getElementById('btn-text').hidden = true;
+      document.getElementById('btn-spinner').hidden = false;
+    });
+  </script>
+</body>
+</html>

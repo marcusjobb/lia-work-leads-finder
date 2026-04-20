@@ -1,0 +1,26 @@
+[project]
+name = "lia-leads-finder"
+version = "0.1.0"
+description = "Hitta LIA-praktikplatser baserat på din tech stack och stad"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "fastapi>=0.136.0",
+    "httpx>=0.28.1",
+    "jinja2>=3.1.6",
+    "playwright>=1.58.0",
+    "pydantic>=2.13.3",
+    "python-multipart>=0.0.26",
+    "uvicorn[standard]>=0.44.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

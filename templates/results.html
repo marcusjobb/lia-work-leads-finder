@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resultat — LIA Leads Finder</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <h1>LIA-leads för {{ config.tech_stack | join(", ") }} i {{ config.city }}</h1>
+    <a href="/" class="back-link">← Ny sökning</a>
+
+    {% if not profiles %}
+      <p class="empty-state">Inga matchande företag hittades. Prova en bredare sökning.</p>
+    {% else %}
+      <p class="result-count">{{ profiles | length }} företag hittade</p>
+      <ul class="lead-list">
+        {% for p in profiles %}
+        <li class="lead-card lead-card--{{ p.tier | lower }}">
+          <div class="lead-header">
+            <span class="tier-badge tier-badge--{{ p.tier | lower }}">{{ p.tier }}</span>
+            <strong class="company-name">{{ p.company_name }}</strong>
+            <span class="city">{{ p.city }}</span>
+            <span class="score">{{ p.score | round(0) | int }}p</span>
+          </div>
+          <p class="match-reason">{{ p.match_reason }}</p>
+          {% if p.tech_tags %}
+          <div class="tech-tags">
+            {% for tag in p.tech_tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+          </div>
+          {% endif %}
+          {% if p.score_breakdown.tech_match > 0 %}
+          <div class="score-bars">
+            <div class="bar-row">
+              <span>Tech</span>
+              <div class="bar"><div class="bar-fill" style="width: {{ p.score_breakdown.tech_match }}%"></div></div>
+              <span>{{ p.score_breakdown.tech_match | round(0) | int }}</span>
+            </div>
+            <div class="bar-row">
+              <span>Geo</span>
+              <div class="bar"><div class="bar-fill" style="width: {{ p.score_breakdown.geo }}%"></div></div>
+              <span>{{ p.score_breakdown.geo | round(0) | int }}</span>
+            </div>
+          </div>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </main>
+</body>
+</html>
