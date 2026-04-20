@@ -11,9 +11,10 @@
     <h1>LIA-leads för {{ config.tech_stack | join(", ") }} i {{ config.city }}</h1>
     <a href="/" class="back-link">← Ny sökning</a>
 
-    <p class="result-count">
-      Visar {{ profiles | length }} av {{ total }} annonser (sida {{ page }})
-    </p>
+    <div class="toolbar">
+      <p class="result-count">Visar {{ profiles | length }} av {{ total }} annonser (sida {{ page }})</p>
+      <button class="btn-toggle" id="skipToggle" onclick="toggleSkip()">Dölj SKIP</button>
+    </div>
 
     <div class="pagination">
       {% if page > 1 %}
@@ -80,43 +81,69 @@
             <span class="city">{{ p.city }}</span>
             <span class="source-badge source-badge--{{ p.source }}">{{ p.source | upper }}</span>
             <span class="score">{{ p.score | round(0) | int }}p</span>
-          </div>
-          {% if p.job_title %}
-          <p class="job-title">
-            {% if p.job_url %}
-            <a href="{{ p.job_url }}" target="_blank" rel="noopener" class="job-link">{{ p.job_title }}</a>
-            {% else %}
-            {{ p.job_title }}
+            {% if p.tier == 'WEAK' or p.tier == 'SKIP' %}
+            <button class="expand-btn" onclick="toggleCard(this)">Visa mer ▾</button>
             {% endif %}
-          </p>
-          {% endif %}
-          <p class="match-reason">{{ p.match_reason }}</p>
-          {% if p.tech_tags %}
-          <div class="tech-tags">
-            {% for tag in p.tech_tags %}<span class="tag">{{ tag }}</span>{% endfor %}
           </div>
-          {% endif %}
-          <div class="score-bars">
-            {% set bars = [
-              ("Tech",      p.score_breakdown.tech_match),
-              ("Geo",       p.score_breakdown.geo),
-              ("Kontakt",   p.score_breakdown.contact),
-              ("Aktivitet", p.score_breakdown.activity),
-              ("Senioritet",p.score_breakdown.seniority),
-              ("Stabilitet",p.score_breakdown.stability),
-            ] %}
-            {% for label, val in bars %}
-            <div class="bar-row">
-              <span>{{ label }}</span>
-              <div class="bar"><div class="bar-fill" style="width: {{ val }}%"></div></div>
-              <span>{{ val | round(0) | int }}</span>
+          <div class="card-body">
+            {% if p.job_title %}
+            <p class="job-title">
+              {% if p.job_url %}
+              <a href="{{ p.job_url }}" target="_blank" rel="noopener" class="job-link">{{ p.job_title }}</a>
+              {% else %}
+              {{ p.job_title }}
+              {% endif %}
+            </p>
+            {% endif %}
+            <p class="match-reason">{{ p.match_reason }}</p>
+            {% if p.tech_tags %}
+            <div class="tech-tags">
+              {% for tag in p.tech_tags %}<span class="tag">{{ tag }}</span>{% endfor %}
             </div>
-            {% endfor %}
+            {% endif %}
+            <div class="score-bars">
+              {% set bars = [
+                ("Tech",      p.score_breakdown.tech_match),
+                ("Geo",       p.score_breakdown.geo),
+                ("Kontakt",   p.score_breakdown.contact),
+                ("Aktivitet", p.score_breakdown.activity),
+                ("Senioritet",p.score_breakdown.seniority),
+                ("Stabilitet",p.score_breakdown.stability),
+              ] %}
+              {% for label, val in bars %}
+              <div class="bar-row">
+                <span>{{ label }}</span>
+                <div class="bar"><div class="bar-fill" style="width: {{ val }}%"></div></div>
+                <span>{{ val | round(0) | int }}</span>
+              </div>
+              {% endfor %}
+            </div>
           </div>
         </li>
         {% endfor %}
       </ul>
     {% endif %}
   </main>
+
+  <script>
+    // Collapse WEAK and SKIP cards by default
+    document.querySelectorAll('.lead-card--weak .card-body, .lead-card--skip .card-body')
+      .forEach(el => el.style.display = 'none');
+
+    function toggleCard(btn) {
+      const body = btn.closest('.lead-card').querySelector('.card-body');
+      const hidden = body.style.display === 'none';
+      body.style.display = hidden ? '' : 'none';
+      btn.textContent = hidden ? 'Visa mindre ▴' : 'Visa mer ▾';
+    }
+
+    let skipHidden = false;
+    function toggleSkip() {
+      skipHidden = !skipHidden;
+      document.querySelectorAll('.lead-card--skip')
+        .forEach(el => el.style.display = skipHidden ? 'none' : '');
+      document.getElementById('skipToggle').textContent = skipHidden ? 'Visa SKIP' : 'Dölj SKIP';
+    }
+  </script>
 </body>
 </html>
