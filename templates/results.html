@@ -11,10 +11,35 @@
     <h1>LIA-leads för {{ config.tech_stack | join(", ") }} i {{ config.city }}</h1>
     <a href="/" class="back-link">← Ny sökning</a>
 
+    <p class="result-count">
+      Visar {{ profiles | length }} av {{ total }} annonser (sida {{ page }})
+    </p>
+
+    <div class="pagination">
+      {% if page > 1 %}
+      <form method="post" action="/search" style="display:inline">
+        <input type="hidden" name="city" value="{{ config.city }}">
+        <input type="hidden" name="tech_stack" value="{{ config.tech_stack | join(', ') }}">
+        {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
+        <input type="hidden" name="page" value="{{ page - 1 }}">
+        <button type="submit" class="btn-page">← Föregående</button>
+      </form>
+      {% endif %}
+
+      {% if page * page_size < total %}
+      <form method="post" action="/search" style="display:inline">
+        <input type="hidden" name="city" value="{{ config.city }}">
+        <input type="hidden" name="tech_stack" value="{{ config.tech_stack | join(', ') }}">
+        {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
+        <input type="hidden" name="page" value="{{ page + 1 }}">
+        <button type="submit" class="btn-page">Nästa →</button>
+      </form>
+      {% endif %}
+    </div>
+
     {% if not profiles %}
       <p class="empty-state">Inga matchande företag hittades. Prova en bredare sökning.</p>
     {% else %}
-      <p class="result-count">{{ profiles | length }} företag hittade</p>
       <ul class="lead-list">
         {% for p in profiles %}
         <li class="lead-card lead-card--{{ p.tier | lower }}">

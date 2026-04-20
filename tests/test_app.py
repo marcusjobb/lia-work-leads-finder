@@ -25,7 +25,8 @@ def test_search_returns_results(client):
             job_title="Java Developer",
         )
     ]
-    with patch("app.scrape_indeed", new=AsyncMock(return_value=fake_companies)):
+    with patch("app.scrape_indeed", new=AsyncMock(return_value=fake_companies)), \
+         patch("app.scrape_af", new=AsyncMock(return_value=([], 0))):
         response = client.post(
             "/search",
             data={"city": "Göteborg", "tech_stack": "Java"},
@@ -35,7 +36,8 @@ def test_search_returns_results(client):
 
 
 def test_search_empty_results(client):
-    with patch("app.scrape_indeed", new=AsyncMock(return_value=[])):
+    with patch("app.scrape_indeed", new=AsyncMock(return_value=[])), \
+         patch("app.scrape_af", new=AsyncMock(return_value=([], 0))):
         response = client.post(
             "/search",
             data={"city": "Göteborg", "tech_stack": "Java"},

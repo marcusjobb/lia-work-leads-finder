@@ -27,13 +27,15 @@ async def search(request: Request):
     form = await request.form()
     config = parse_config(dict(form))
 
-    indeed_results, af_results = await asyncio.gather(
+    indeed_results, af_result = await asyncio.gather(
         scrape_indeed(config.tech_stack, config.city, config.all_sweden),
-        scrape_af(config.tech_stack, config.city, config.all_sweden),
+        scrape_af(config.tech_stack, config.city, config.all_sweden, page=config.page),
     )
+    af_companies, total_af = af_result
+
     seen: set[str] = set()
     raw_companies = []
-    for c in indeed_results + af_results:
+    for c in indeed_results + af_companies:
         key = c.name.lower().strip()
         if key not in seen:
             seen.add(key)
@@ -46,7 +48,13 @@ async def search(request: Request):
     return templates.TemplateResponse(
         request,
         "results.html",
-        {"profiles": profiles, "config": config},
+        {
+            "profiles": profiles,
+            "config": config,
+            "total": total_af,
+            "page": config.page,
+            "page_size": 10,
+        },
     )
 
 

@@ -37,3 +37,6 @@ button:hover { background: #0052a3; }
 .bar-row span:last-child { width: 2rem; text-align: right; }
 .bar { flex: 1; background: #e2e8f0; border-radius: 2px; height: 6px; }
 .bar-fill { background: #3b82f6; height: 100%; border-radius: 2px; }
+.pagination { margin: 1rem 0; display: flex; gap: .5rem; }
+.btn-page { background: white; color: #0066cc; border: 1px solid #0066cc; padding: .4rem .9rem; border-radius: 4px; font-size: .9rem; cursor: pointer; }
+.btn-page:hover { background: #e8f0fe; }

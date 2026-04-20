@@ -7,6 +7,7 @@ class SearchConfig(BaseModel):
     tech_stack: list[str]
     all_sweden: bool = False
     program_url: str | None = None
+    page: int = 1
 
 
 class CompanyRaw(BaseModel):

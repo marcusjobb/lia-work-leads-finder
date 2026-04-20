@@ -31,7 +31,7 @@ async def test_scrape_returns_companies():
             get=AsyncMock(return_value=mock_response)
         ))
         mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
-        results = await scrape_af(["Python", "Django"], "Stockholm")
+        results, _ = await scrape_af(["Python", "Django"], "Stockholm")
 
     assert len(results) == 2
     assert results[0].name == "Acme AB"
@@ -47,7 +47,7 @@ async def test_scrape_empty_on_error():
             get=AsyncMock(side_effect=Exception("network error"))
         ))
         mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
-        results = await scrape_af(["Python"], "Stockholm")
+        results, _ = await scrape_af(["Python"], "Stockholm")
 
     assert results == []
 
@@ -65,7 +65,7 @@ async def test_skips_entries_without_employer_name():
             get=AsyncMock(return_value=mock_response)
         ))
         mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
-        results = await scrape_af(["Python"], "Stockholm")
+        results, _ = await scrape_af(["Python"], "Stockholm")
 
     assert results == []
 
@@ -91,6 +91,56 @@ async def test_extracts_publication_date():
             return_value=MagicMock(get=AsyncMock(return_value=mock_response))
         )
         mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
-        results = await scrape_af(["Python"], "Stockholm")
+        results, _ = await scrape_af(["Python"], "Stockholm")
 
     assert results[0].publication_date == "2026-03-15T12:00:00"
+
+
+@pytest.mark.asyncio
+async def test_returns_total_hits():
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "total": {"value": 42},
+        "hits": [
+            {
+                "headline": "Python Developer",
+                "employer": {"name": "Acme AB"},
+                "workplace_address": {"city": "Göteborg"},
+                "webpage_url": "https://example.com/job/1",
+                "publication_date": "2026-04-01T10:00:00",
+            }
+        ],
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(return_value=mock_response))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        results, total = await scrape_af(["Python"], "Göteborg", page=1)
+
+    assert total == 42
+    assert len(results) == 1
+
+
+@pytest.mark.asyncio
+async def test_uses_offset_for_page_2():
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"total": {"value": 42}, "hits": []}
+    mock_response.raise_for_status = MagicMock()
+
+    captured_params = {}
+
+    async def capture_get(url, **kwargs):
+        captured_params.update(kwargs.get("params", {}))
+        return mock_response
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(side_effect=capture_get))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        await scrape_af(["Python"], "Göteborg", page=2)
+
+    assert captured_params.get("offset") == 10  # PAGE_SIZE=10, page 2 → offset=10
