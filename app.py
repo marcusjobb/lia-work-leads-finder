@@ -33,13 +33,7 @@ async def search(request: Request):
     )
     af_companies, total_af = af_result
 
-    seen: set[str] = set()
-    raw_companies = []
-    for c in indeed_results + af_companies:
-        key = c.name.lower().strip()
-        if key not in seen:
-            seen.add(key)
-            raw_companies.append(c)
+    raw_companies = indeed_results + af_companies
 
     profiles = [build_profile(c, config) for c in raw_companies]
     profiles = [p for p in profiles if is_relevant(p)]

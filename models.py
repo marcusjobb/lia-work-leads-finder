@@ -50,6 +50,9 @@ class LeadProfile(BaseModel):
     org_number: str | None = None
     website: str | None = None
     city: str
+    source: str = "unknown"
+    job_title: str | None = None
+    job_url: str | None = None
     tech_tags: list[str]
     contact: ContactInfo
     score: float = Field(ge=0.0, le=100.0)

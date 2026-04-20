@@ -37,7 +37,16 @@ button:hover { background: #0052a3; }
 .bar-row span:last-child { width: 2rem; text-align: right; }
 .bar { flex: 1; background: #e2e8f0; border-radius: 2px; height: 6px; }
 .bar-fill { background: #3b82f6; height: 100%; border-radius: 2px; }
-.pagination { margin: 1rem 0; display: flex; gap: .5rem; }
+.pagination { margin: 1rem 0; display: flex; align-items: center; gap: .5rem; }
 .btn-page { background: white; color: #0066cc; border: 1px solid #0066cc; padding: .4rem .9rem; border-radius: 4px; font-size: .9rem; cursor: pointer; }
-.btn-page:hover { background: #e8f0fe; }
+.btn-page:hover:not(:disabled) { background: #e8f0fe; }
+.btn-page:disabled { color: #aaa; border-color: #ddd; cursor: default; }
+.btn-nav { width: 2.2rem; font-size: 1.1rem; padding: .3rem 0; text-align: center; border-radius: 50%; }
+.page-info { font-size: .9rem; color: #555; white-space: nowrap; }
 .select-page-size { border: 1px solid #0066cc; border-radius: 4px; padding: .35rem .6rem; font-size: .9rem; color: #0066cc; background: white; cursor: pointer; }
+.source-badge { font-size: .7rem; font-weight: 700; padding: .1rem .4rem; border-radius: 3px; letter-spacing: .05em; }
+.source-badge--af { background: #fef9c3; color: #854d0e; }
+.source-badge--indeed { background: #dbeafe; color: #1e40af; }
+.job-title { margin: .3rem 0 .2rem; font-size: .9rem; }
+.job-link { color: #0066cc; text-decoration: none; }
+.job-link:hover { text-decoration: underline; }

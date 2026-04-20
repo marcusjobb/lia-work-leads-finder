@@ -40,6 +40,8 @@ def _assemble(
         website=company.website,
         city=company.city,
         source=company.source,
+        job_title=company.job_title,
+        job_url=company.job_url,
         tech_tags=[t.lower() for t in config.tech_stack if t.lower() in analysis_text.lower()],
         contact=contact_info,
         score=score,

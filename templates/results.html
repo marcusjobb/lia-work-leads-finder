@@ -23,9 +23,13 @@
         {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
         <input type="hidden" name="page" value="{{ page - 1 }}">
         <input type="hidden" name="page_size" value="{{ page_size }}">
-        <button type="submit" class="btn-page">← Föregående</button>
+        <button type="submit" class="btn-page btn-nav" title="Föregående sida">&#8592;</button>
       </form>
+      {% else %}
+      <button class="btn-page btn-nav" disabled title="Föregående sida">&#8592;</button>
       {% endif %}
+
+      <span class="page-info">Sida {{ page }}</span>
 
       <form method="post" action="/search" style="display:inline">
         <input type="hidden" name="city" value="{{ config.city }}">
@@ -34,7 +38,7 @@
         <input type="hidden" name="page" value="1">
         <select name="page_size" class="select-page-size" onchange="this.form.submit()">
           {% for size in [5, 10, 25, 50, 100] %}
-          <option value="{{ size }}" {% if size == page_size %}selected{% endif %}>{{ size }} per sida</option>
+          <option value="{{ size }}" {% if size == page_size %}selected{% endif %}>{{ size }} / sida</option>
           {% endfor %}
         </select>
       </form>
@@ -46,8 +50,10 @@
         {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
         <input type="hidden" name="page" value="{{ page + 1 }}">
         <input type="hidden" name="page_size" value="{{ page_size }}">
-        <button type="submit" class="btn-page">Nästa →</button>
+        <button type="submit" class="btn-page btn-nav" title="Nästa sida">&#8594;</button>
       </form>
+      {% else %}
+      <button class="btn-page btn-nav" disabled title="Nästa sida">&#8594;</button>
       {% endif %}
     </div>
 
@@ -61,8 +67,18 @@
             <span class="tier-badge tier-badge--{{ p.tier | lower }}">{{ p.tier }}</span>
             <strong class="company-name">{{ p.company_name }}</strong>
             <span class="city">{{ p.city }}</span>
+            <span class="source-badge source-badge--{{ p.source }}">{{ p.source | upper }}</span>
             <span class="score">{{ p.score | round(0) | int }}p</span>
           </div>
+          {% if p.job_title %}
+          <p class="job-title">
+            {% if p.job_url %}
+            <a href="{{ p.job_url }}" target="_blank" rel="noopener" class="job-link">{{ p.job_title }}</a>
+            {% else %}
+            {{ p.job_title }}
+            {% endif %}
+          </p>
+          {% endif %}
           <p class="match-reason">{{ p.match_reason }}</p>
           {% if p.tech_tags %}
           <div class="tech-tags">
