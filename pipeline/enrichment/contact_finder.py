@@ -26,7 +26,7 @@ async def find_contact(website: str | None) -> tuple[ContactInfo, float]:
     soup = BeautifulSoup(html, "html.parser")
 
     for tag in soup.find_all("a", href=re.compile(r"^mailto:", re.I)):
-        email = tag["href"].replace("mailto:", "").strip().split("?")[0]
+        email = re.sub(r"^mailto:", "", tag["href"], flags=re.I).strip().split("?")[0]
         if email:
             return ContactInfo(email=email), 100.0
 
