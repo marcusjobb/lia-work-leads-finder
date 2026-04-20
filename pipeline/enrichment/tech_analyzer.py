@@ -22,8 +22,7 @@ def _families_for(terms: list[str]) -> set[str]:
     for term in terms:
         t = term.lower().strip()
         for family, keywords in STACK_FAMILIES.items():
-            # Match: keyword is in term (as substring) OR term is exact keyword
-            if any(kw in t for kw in keywords):
+            if any(_word_match(kw, t) for kw in keywords):
                 result.add(family)
                 break  # Each term matches only one family (first match wins)
     return result

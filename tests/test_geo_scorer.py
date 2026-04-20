@@ -18,3 +18,7 @@ def test_different_city():
 def test_all_sweden():
     score = score_geo("Kiruna", "Göteborg", all_sweden=True)
     assert score == 60.0
+
+
+def test_all_sweden_still_gives_100_for_matching_city():
+    assert score_geo("Göteborg", "Göteborg", all_sweden=True) == 100.0
