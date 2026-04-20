@@ -1,0 +1,18 @@
+# Planning & internal docs
+BACKGROUND.md
+PLAN.md
+Blacklist.md
+
+# Claude Code files
+CLAUDE.md
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+
+# Env
+.env
+.env.*
