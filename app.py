@@ -31,7 +31,13 @@ async def search(request: Request):
         scrape_indeed(config.tech_stack, config.city, config.all_sweden),
         scrape_af(config.tech_stack, config.city, config.all_sweden),
     )
-    raw_companies = indeed_results + af_results
+    seen: set[str] = set()
+    raw_companies = []
+    for c in indeed_results + af_results:
+        key = c.name.lower().strip()
+        if key not in seen:
+            seen.add(key)
+            raw_companies.append(c)
 
     profiles = [build_profile(c, config) for c in raw_companies]
     profiles = [p for p in profiles if is_relevant(p)]

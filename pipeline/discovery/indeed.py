@@ -23,14 +23,16 @@ async def scrape_indeed(
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
-            await page.set_extra_http_headers({
-                "Accept-Language": "sv-SE,sv;q=0.9,en;q=0.8",
-            })
-            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
-            await page.wait_for_timeout(2000)
-            html = await page.content()
-            await browser.close()
+            try:
+                page = await browser.new_page()
+                await page.set_extra_http_headers({
+                    "Accept-Language": "sv-SE,sv;q=0.9,en;q=0.8",
+                })
+                await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                await page.wait_for_timeout(2000)
+                html = await page.content()
+            finally:
+                await browser.close()
     except Exception as exc:
         logger.warning("Indeed Playwright scrape failed: %s", exc)
         return []

@@ -27,7 +27,7 @@ async def scrape_af(
         async with httpx.AsyncClient(timeout=15) as client:
             response = await client.get(AF_SEARCH_URL, params=params, headers=HEADERS)
             response.raise_for_status()
-        data = response.json()
+            data = response.json()
     except Exception as exc:
         logger.warning("AF scrape failed: %s", exc)
         return []
