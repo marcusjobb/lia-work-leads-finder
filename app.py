@@ -13,6 +13,8 @@ from pipeline.discovery.company_scraper import scrape_companies
 from pipeline.integration import build_profile_async
 from pipeline.enrichment.program_scraper import scrape_program
 from pipeline.validators.relevance import is_relevant
+from pipeline.validators.completeness import is_complete
+from pipeline.validators.contact import is_reachable
 
 app = FastAPI(title="LIA Leads Finder")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -44,7 +46,7 @@ async def search(request: Request):
     raw_companies = indeed_results + af_companies + allabolag_results
 
     profiles = list(await asyncio.gather(*[build_profile_async(c, config) for c in raw_companies]))
-    profiles = [p for p in profiles if is_relevant(p)]
+    profiles = [p for p in profiles if is_relevant(p) and is_complete(p) and is_reachable(p)]
     profiles.sort(key=lambda p: p.score, reverse=True)
 
     _results_cache.clear()
