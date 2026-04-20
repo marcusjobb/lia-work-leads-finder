@@ -29,6 +29,10 @@ async def search(request: Request):
     form = await request.form()
     config = parse_config(dict(form))
 
+    if config.program_url and not config.tech_stack:
+        from pipeline.enrichment.program_scraper import scrape_program
+        config = config.model_copy(update={"tech_stack": await scrape_program(config.program_url)})
+
     indeed_results, af_result = await asyncio.gather(
         scrape_indeed(config.tech_stack, config.city, config.all_sweden),
         scrape_af(config.tech_stack, config.city, config.all_sweden, page=config.page, page_size=config.page_size),
