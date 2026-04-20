@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ansökningsbrev — {{ lead.company_name if lead else "Okänt företag" }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <div class="top-actions">
+      <a href="javascript:history.back()" class="back-link">← Tillbaka</a>
+    </div>
+
+    {% if not lead %}
+      <p class="empty-state">{{ error or "Företaget hittades inte. Gör en ny sökning." }}</p>
+    {% else %}
+      <div class="cl-header">
+        <span class="tier-badge tier-badge--{{ lead.tier | lower }}">{{ lead.tier }}</span>
+        <h1>{{ lead.company_name }}</h1>
+        <span class="city">{{ lead.city }}</span>
+      </div>
+
+      <div class="student-summary">
+        <strong>{{ student.name }}</strong> — {{ student.education }}<br>
+        <span class="tech-tags" style="margin-top:.4rem">
+          {% for t in student.tech_stack %}<span class="tag">{{ t }}</span>{% endfor %}
+        </span>
+      </div>
+
+      {% if error %}
+        <p class="cl-error">{{ error }}</p>
+      {% endif %}
+
+      {% if warnings %}
+        <ul class="cl-warnings">
+          {% for w in warnings %}<li>{{ w }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if letter %}
+        <div class="cl-letter">
+          <textarea class="letter-text" rows="20">{{ letter }}</textarea>
+        </div>
+        <div class="cl-actions">
+          <a href="/download-letter?company={{ lead.company_name | urlencode }}" class="btn-download">Ladda ner .docx</a>
+          <form method="post" action="/generate-letter" style="display:inline">
+            <input type="hidden" name="company_name" value="{{ lead.company_name }}">
+            <button type="submit" class="btn-regenerate">Generera nytt</button>
+          </form>
+        </div>
+      {% else %}
+        <form method="post" action="/generate-letter" class="cl-generate-form">
+          <input type="hidden" name="company_name" value="{{ lead.company_name }}">
+          <p class="cl-hint">Klicka för att skrapa företaget och generera ett personaliserat brev.</p>
+          <button type="submit" class="btn-generate">Generera ansökningsbrev</button>
+        </form>
+      {% endif %}
+    {% endif %}
+  </main>
+</body>
+</html>

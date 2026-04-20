@@ -9,7 +9,10 @@
 <body>
   <main class="container">
     <h1>LIA-leads för {{ config.tech_stack | join(", ") }} i {{ config.city }}</h1>
-    <a href="/" class="back-link">← Ny sökning</a>
+    <div class="top-actions">
+      <a href="/" class="back-link">← Ny sökning</a>
+      {% if profiles %}<a href="/export-leads" class="btn-export">Exportera leads (.xlsx)</a>{% endif %}
+    </div>
 
     <div class="toolbar">
       <p class="result-count">Visar {{ profiles | length }} av {{ total }} annonser (sida {{ page }})</p>
@@ -119,6 +122,11 @@
               </div>
               {% endfor %}
             </div>
+            {% if p.tier in ['STRONG', 'GOOD'] %}
+            <div class="card-actions">
+              <a href="/cover-letter?company={{ p.company_name | urlencode }}" class="btn-letter">Skriv ansökningsbrev</a>
+            </div>
+            {% endif %}
           </div>
         </li>
         {% endfor %}
@@ -127,7 +135,6 @@
   </main>
 
   <script>
-    // Collapse WEAK and SKIP cards by default
     document.querySelectorAll('.lead-card--weak .card-body, .lead-card--skip .card-body')
       .forEach(el => el.style.display = 'none');
 

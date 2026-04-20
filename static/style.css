@@ -65,3 +65,31 @@ button:hover { background: #0052a3; }
 .detail-card--full { width: 100%; }
 .detail-section-title { font-size: 1rem; font-weight: 700; margin: 0 0 .75rem; color: #333; }
 .muted { color: #888; font-size: .9rem; }
+
+/* Top action bar */
+.top-actions { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+
+/* Phase 2 buttons */
+.btn-export { background: #0066cc; color: white; padding: .4rem .9rem; border-radius: 4px; text-decoration: none; font-size: .85rem; }
+.btn-export:hover { background: #0052a3; }
+.btn-letter { display: inline-block; margin-top: .75rem; background: #16a34a; color: white; padding: .4rem .9rem; border-radius: 4px; text-decoration: none; font-size: .85rem; }
+.btn-letter:hover { background: #15803d; }
+.card-actions { margin-top: .5rem; }
+
+/* Cover letter page */
+.cl-header { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.cl-header h1 { font-size: 1.5rem; margin: 0; }
+.student-summary { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: .75rem 1rem; margin-bottom: 1.25rem; font-size: .9rem; line-height: 1.6; }
+.cl-error { color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: .75rem 1rem; margin-bottom: 1rem; }
+.cl-warnings { color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: .75rem 1rem .75rem 1.5rem; margin-bottom: 1rem; }
+.cl-hint { color: #555; font-size: .9rem; margin-bottom: .75rem; }
+.cl-generate-form { text-align: center; padding: 2rem 0; }
+.btn-generate { background: #0066cc; color: white; border: none; padding: .7rem 1.5rem; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+.btn-generate:hover { background: #0052a3; }
+.cl-letter { margin-bottom: 1rem; }
+.letter-text { width: 100%; font-family: Georgia, serif; font-size: .95rem; line-height: 1.7; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 6px; resize: vertical; color: #222; }
+.cl-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.btn-download { background: #16a34a; color: white; padding: .6rem 1.2rem; border-radius: 4px; text-decoration: none; font-size: .95rem; }
+.btn-download:hover { background: #15803d; }
+.btn-regenerate { background: #6b7280; color: white; border: none; padding: .6rem 1.2rem; border-radius: 4px; font-size: .95rem; cursor: pointer; }
+.btn-regenerate:hover { background: #4b5563; }

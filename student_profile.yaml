@@ -1,0 +1,13 @@
+name: "Anna Lindqvist"
+education: "YH Java-utvecklare, Handelsakademin Göteborg, 2024–2026"
+tech_stack:
+  - "Java"
+  - "Spring Boot"
+  - "SQL"
+  - "Docker"
+experience: "2 år som supporttekniker, hobby-projekt i Python"
+languages:
+  - "svenska"
+  - "engelska"
+portfolio_url: "https://github.com/annalindqvist"
+bio: "Driven och nyfiken, trivs i team och gillar att lösa komplexa problem"
