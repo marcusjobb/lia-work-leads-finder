@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Min profil — LIA Leads Finder</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <div class="top-actions">
+      <a href="/" class="back-link">← Tillbaka</a>
+    </div>
+
+    <h1>Min profil</h1>
+
+    {% if saved %}
+      <p class="profile-saved">Profilen sparad!</p>
+    {% endif %}
+
+    <form method="post" action="/profile" class="search-form">
+      <label for="name">Namn</label>
+      <input type="text" id="name" name="name" value="{{ student.name }}" required>
+
+      <label for="education">Utbildning</label>
+      <input type="text" id="education" name="education" value="{{ student.education }}" required>
+
+      <label for="experience">Erfarenhet</label>
+      <input type="text" id="experience" name="experience" value="{{ student.experience }}">
+
+      <label for="languages">Språk <small>(kommaseparerat)</small></label>
+      <input type="text" id="languages" name="languages" value="{{ student.languages | join(', ') }}">
+
+      <label for="portfolio_url">Portfolio / GitHub URL <small>(valfri)</small></label>
+      <input type="url" id="portfolio_url" name="portfolio_url" value="{{ student.portfolio_url or '' }}">
+
+      <label for="bio">Bio <small>(kort beskrivning av dig)</small></label>
+      <textarea id="bio" name="bio" rows="3">{{ student.bio }}</textarea>
+
+      <hr style="border:none; border-top:1px solid #e2e8f0; margin:.5rem 0;">
+
+      <label for="program_url">Programsida URL <small>(valfri — för att hämta tech-stack)</small></label>
+      <div style="display:flex; gap:.5rem; align-items:center;">
+        <input type="url" id="program_url" name="program_url"
+               value="{{ student.program_url or '' }}"
+               placeholder="t.ex. https://www.yh-skolan.se/program/javautvecklare"
+               style="flex:1;">
+      </div>
+
+      {% if analyzed_keywords %}
+      <div class="keyword-section">
+        <p class="keyword-intro">Hittade tekniker från din utbildningssida — kryssa i vad som stämmer:</p>
+        <div class="keyword-grid">
+          {% for kw in analyzed_keywords %}
+          <label class="checkbox-label keyword-item">
+            <input type="checkbox" name="checked_keywords" value="{{ kw }}"
+                   {% if kw in student.tech_stack %}checked{% endif %}>
+            {{ kw }}
+          </label>
+          {% endfor %}
+        </div>
+        <label for="custom_buzzwords" style="margin-top:.75rem;">
+          Egna buzzwords <small>(kommaseparerat — t.ex. Scrum, CI/CD, Agil)</small>
+        </label>
+        <input type="text" id="custom_buzzwords" name="custom_buzzwords"
+               placeholder="Lägg till egna tekniker eller begrepp">
+      </div>
+      {% else %}
+      <label for="tech_stack">Tech stack <small>(kommaseparerat)</small></label>
+      <input type="text" id="tech_stack" name="tech_stack" value="{{ student.tech_stack | join(', ') }}">
+      {% endif %}
+
+      <button type="submit">Spara profil</button>
+    </form>
+
+    <form method="post" action="/profile/analyze-url" style="margin-top:.75rem;">
+      <input type="hidden" name="program_url" id="analyze_url_hidden">
+      <button type="submit" class="btn-toggle"
+              onclick="document.getElementById('analyze_url_hidden').value=document.getElementById('program_url').value">
+        Analysera URL och visa tech-keywords ↗
+      </button>
+    </form>
+
+  </main>
+</body>
+</html>

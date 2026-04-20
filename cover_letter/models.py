@@ -8,6 +8,7 @@ class StudentProfile(BaseModel):
     experience: str
     languages: list[str]
     portfolio_url: str | None = None
+    program_url: str | None = None
     bio: str
 
 

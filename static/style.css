@@ -5,7 +5,7 @@ h1 { font-size: 1.8rem; margin-bottom: .25rem; }
 .subtitle { color: #555; margin-bottom: 1.5rem; }
 .search-form { display: flex; flex-direction: column; gap: .75rem; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
 label { font-weight: 600; font-size: .9rem; }
-input[type=text] { padding: .5rem .75rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+input[type=text], input[type=url] { padding: .5rem .75rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; width: 100%; }
 .checkbox-label { display: flex; align-items: center; gap: .5rem; font-weight: normal; }
 button { background: #0066cc; color: white; border: none; padding: .6rem 1.2rem; border-radius: 4px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .5rem; }
 button:disabled { background: #4d94e0; cursor: not-allowed; }
@@ -65,6 +65,11 @@ button:hover { background: #0052a3; }
 .detail-card--full { width: 100%; }
 .detail-section-title { font-size: 1rem; font-weight: 700; margin: 0 0 .75rem; color: #333; }
 .muted { color: #888; font-size: .9rem; }
+.keyword-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; display: flex; flex-direction: column; gap: .5rem; }
+.keyword-intro { margin: 0 0 .5rem; font-size: .9rem; color: #444; font-weight: 600; }
+.keyword-grid { display: flex; flex-wrap: wrap; gap: .4rem .75rem; }
+.keyword-item { font-weight: normal; font-size: .9rem; }
+.profile-saved { background: #dcfce7; color: #15803d; padding: .5rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
 
 /* Top action bar */
 .top-actions { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
@@ -93,3 +98,32 @@ button:hover { background: #0052a3; }
 .btn-download:hover { background: #15803d; }
 .btn-regenerate { background: #6b7280; color: white; border: none; padding: .6rem 1.2rem; border-radius: 4px; font-size: .95rem; cursor: pointer; }
 .btn-regenerate:hover { background: #4b5563; }
+
+/* Profile page */
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.btn-profile { background: #6b7280; color: white; padding: .4rem .9rem; border-radius: 4px; text-decoration: none; font-size: .85rem; white-space: nowrap; align-self: center; }
+.btn-profile:hover { background: #4b5563; }
+.profile-saved { color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: .6rem 1rem; margin-bottom: 1rem; font-size: .9rem; }
+
+/* Score bar metric tooltips */
+.bar-label { display: flex; align-items: center; }
+.metric-tip {
+  border-bottom: 1px dotted #94a3b8;
+  cursor: default; position: relative;
+}
+.metric-tip::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + .4rem); left: 0;
+  background: #1e293b; color: #f1f5f9;
+  font-size: .75rem; font-weight: 400; line-height: 1.4;
+  padding: .4rem .65rem; border-radius: 5px;
+  white-space: normal; width: 16rem; text-align: left;
+  pointer-events: none; opacity: 0; transition: opacity .15s;
+  z-index: 10;
+}
+.metric-tip:hover::after { opacity: 1; }
+
+/* City + radius inline row */
+.city-row { display: flex; gap: .5rem; }
+.city-row input { flex: 1; }
+.city-row select { flex: 0 0 auto; width: 8.5rem; }

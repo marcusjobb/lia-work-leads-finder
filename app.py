@@ -5,7 +5,7 @@ from urllib.parse import unquote
 
 import yaml
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -23,6 +23,7 @@ from pipeline.discovery.af_scraper import scrape_af, PAGE_SIZE
 from pipeline.discovery.company_scraper import scrape_companies
 from pipeline.integration import build_profile_async
 from pipeline.enrichment.program_scraper import scrape_program
+from pipeline.enrichment.geocoder import geocode
 from pipeline.validators.relevance import is_relevant
 from pipeline.validators.completeness import is_complete
 from pipeline.validators.contact import is_reachable
@@ -89,6 +90,56 @@ async def index(request: Request):
     return templates.TemplateResponse(request, "index.html")
 
 
+@app.get("/profile", response_class=HTMLResponse)
+async def profile_form(request: Request, saved: bool = False, keywords: str = ""):
+    student = _load_student()
+    analyzed = [k.strip() for k in keywords.split(",") if k.strip()]
+    return templates.TemplateResponse(request, "profile.html", {
+        "student": student,
+        "saved": saved,
+        "analyzed_keywords": analyzed,
+    })
+
+
+@app.post("/profile/analyze-url")
+async def analyze_program_url(request: Request):
+    form = await request.form()
+    url = form.get("program_url", "").strip()
+    if not url:
+        return RedirectResponse("/profile", status_code=303)
+    keywords = await scrape_program(url)
+    return RedirectResponse(f"/profile?keywords={','.join(keywords)}", status_code=303)
+
+
+@app.post("/profile", response_class=HTMLResponse)
+async def profile_save(request: Request):
+    form = await request.form()
+
+    checked = list(form.getlist("checked_keywords"))
+    custom = [t.strip() for t in form.get("custom_buzzwords", "").split(",") if t.strip()]
+    text_input = [t.strip() for t in form.get("tech_stack", "").split(",") if t.strip()]
+    tech_stack = list(dict.fromkeys(checked + custom)) or text_input
+
+    languages = [l.strip() for l in form.get("languages", "").split(",") if l.strip()]
+    portfolio_url = form.get("portfolio_url", "").strip() or None
+    program_url = form.get("program_url", "").strip() or None
+
+    data = {
+        "name": form.get("name", "").strip(),
+        "education": form.get("education", "").strip(),
+        "tech_stack": tech_stack,
+        "experience": form.get("experience", "").strip(),
+        "languages": languages or ["svenska"],
+        "portfolio_url": portfolio_url,
+        "program_url": program_url,
+        "bio": form.get("bio", "").strip(),
+    }
+    Path("student_profile.yaml").write_text(yaml.dump(data, allow_unicode=True, sort_keys=False))
+
+    student = StudentProfile(**data)
+    return templates.TemplateResponse(request, "profile.html", {"student": student, "saved": True, "analyzed_keywords": []})
+
+
 @app.post("/search", response_class=HTMLResponse)
 async def search(request: Request):
     form = await request.form()
@@ -99,28 +150,35 @@ async def search(request: Request):
 
     indeed_results, af_result, allabolag_results = await asyncio.gather(
         scrape_indeed(config.tech_stack, config.city, config.all_sweden),
-        scrape_af(config.tech_stack, config.city, config.all_sweden, page=config.page, page_size=config.page_size),
+        scrape_af(config.tech_stack, config.city, config.all_sweden, radius_km=config.radius_km),
         scrape_companies(config.tech_stack, config.city),
     )
     af_companies, total_af = af_result
 
     raw_companies = indeed_results + af_companies + allabolag_results
 
-    profiles = list(await asyncio.gather(*[build_profile_async(c, config) for c in raw_companies]))
-    profiles = [p for p in profiles if is_relevant(p) and is_complete(p) and is_reachable(p)]
-    profiles.sort(key=lambda p: p.score, reverse=True)
+    center_coords = await geocode(config.city) if config.radius_km > 0 else None
+    all_profiles = list(await asyncio.gather(*[build_profile_async(c, config, center_coords) for c in raw_companies]))
+    all_profiles = [p for p in all_profiles if is_relevant(p) and is_complete(p) and is_reachable(p)]
+    all_profiles.sort(key=lambda p: p.score, reverse=True)
 
-    _save_profiles(profiles)
+    _save_profiles(all_profiles)
+
+    page = config.page
+    page_size = config.page_size
+    start = (page - 1) * page_size
+    profiles_page = all_profiles[start : start + page_size]
+    total_scored = len(all_profiles)
 
     return templates.TemplateResponse(
         request,
         "results.html",
         {
-            "profiles": profiles,
+            "profiles": profiles_page,
             "config": config,
-            "total": total_af,
-            "page": config.page,
-            "page_size": config.page_size,
+            "total": total_scored,
+            "page": page,
+            "page_size": page_size,
         },
     )
 
