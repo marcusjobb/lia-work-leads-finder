@@ -4,6 +4,7 @@ from pipeline.enrichment.tech_analyzer import analyze_tech
 from pipeline.enrichment.geo_scorer import score_geo
 from pipeline.enrichment.seniority_scorer import score_seniority
 from pipeline.enrichment.contact_finder import find_contact
+from pipeline.enrichment.stability_scorer import score_stability
 from quality_gate import assign_tier, compute_score
 
 _STABILITY_SCORE_DEFAULT = 50.0
@@ -14,6 +15,7 @@ def _assemble(
     config: SearchConfig,
     contact_info: ContactInfo,
     contact_score: float,
+    stability: float = _STABILITY_SCORE_DEFAULT,
 ) -> LeadProfile:
     analysis_text = " ".join(filter(None, [company.job_title, company.description]))
     tech_score = analyze_tech(config.tech_stack, analysis_text)
@@ -24,7 +26,7 @@ def _assemble(
         geo=geo_score,
         contact=contact_score,
         activity=score_activity(company.publication_date),
-        stability=_STABILITY_SCORE_DEFAULT,
+        stability=stability,
         seniority=seniority_score,
     )
     score = compute_score(breakdown)
@@ -57,6 +59,7 @@ def build_profile(company: CompanyRaw, config: SearchConfig) -> LeadProfile:
 
 
 async def build_profile_async(company: CompanyRaw, config: SearchConfig) -> LeadProfile:
-    """Async build — scrapes company website for contact info."""
+    """Async build — scrapes for contact info and company stability."""
     contact_info, contact_score = await find_contact(company.website)
-    return _assemble(company, config, contact_info, contact_score)
+    stability = await score_stability(company.name, company.city)
+    return _assemble(company, config, contact_info, contact_score, stability)

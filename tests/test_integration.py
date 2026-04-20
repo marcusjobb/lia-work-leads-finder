@@ -37,11 +37,14 @@ async def test_build_profile_async_finds_contact():
     company = CompanyRaw(name="Sigma AB", city="Göteborg", source="af",
                          job_title="Python Developer", website="https://sigma.se")
     config = SearchConfig(city="Göteborg", tech_stack=["Python"])
-    with patch("pipeline.integration.find_contact", new_callable=AsyncMock) as mock_fc:
+    with patch("pipeline.integration.find_contact", new_callable=AsyncMock) as mock_fc, \
+         patch("pipeline.integration.score_stability", new_callable=AsyncMock) as mock_st:
         mock_fc.return_value = (ContactInfo(email="jobs@sigma.se"), 100.0)
+        mock_st.return_value = 80.0
         profile = await build_profile_async(company, config)
     assert profile.contact.email == "jobs@sigma.se"
     assert profile.score_breakdown.contact == 100.0
+    assert profile.score_breakdown.stability == 80.0
 
 
 def test_unknown_date_gives_zero_activity():

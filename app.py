@@ -9,7 +9,7 @@ from models import SearchConfig
 from pipeline.init import parse_config
 from pipeline.discovery.indeed import scrape_indeed
 from pipeline.discovery.af_scraper import scrape_af, PAGE_SIZE
-from pipeline.integration import build_profile
+from pipeline.integration import build_profile_async
 from pipeline.validators.relevance import is_relevant
 
 app = FastAPI(title="LIA Leads Finder")
@@ -35,7 +35,7 @@ async def search(request: Request):
 
     raw_companies = indeed_results + af_companies
 
-    profiles = [build_profile(c, config) for c in raw_companies]
+    profiles = list(await asyncio.gather(*[build_profile_async(c, config) for c in raw_companies]))
     profiles = [p for p in profiles if is_relevant(p)]
     profiles.sort(key=lambda p: p.score, reverse=True)
 
