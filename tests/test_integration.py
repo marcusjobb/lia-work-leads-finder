@@ -42,3 +42,19 @@ async def test_build_profile_async_finds_contact():
         profile = await build_profile_async(company, config)
     assert profile.contact.email == "jobs@sigma.se"
     assert profile.score_breakdown.contact == 100.0
+
+
+def test_unknown_date_gives_zero_activity():
+    company = CompanyRaw(name="Old Corp", city="Göteborg", source="af",
+                         job_title="Python Developer", publication_date=None)
+    profile = build_profile(company, SearchConfig(city="Göteborg", tech_stack=["Python"]))
+    assert profile.score_breakdown.activity == 0.0
+
+
+def test_recent_date_uses_high_activity():
+    from datetime import date
+    company = CompanyRaw(name="Fresh Corp", city="Göteborg", source="af",
+                         job_title="Python Developer",
+                         publication_date=date.today().isoformat())
+    profile = build_profile(company, SearchConfig(city="Göteborg", tech_stack=["Python"]))
+    assert profile.score_breakdown.activity == 100.0

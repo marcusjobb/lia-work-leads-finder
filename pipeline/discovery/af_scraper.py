@@ -47,6 +47,7 @@ async def scrape_af(
                     source="af",
                     job_title=hit.get("headline"),
                     job_url=hit.get("webpage_url"),
+                    publication_date=hit.get("publication_date"),
                 )
             )
         return companies

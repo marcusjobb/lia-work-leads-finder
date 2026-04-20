@@ -17,6 +17,7 @@ class CompanyRaw(BaseModel):
     job_title: str | None = None
     job_url: str | None = None
     description: str | None = None  # raw text for tech analysis
+    publication_date: str | None = None  # ISO 8601 from job board API
 
 
 class ContactInfo(BaseModel):

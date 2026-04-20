@@ -68,3 +68,29 @@ async def test_skips_entries_without_employer_name():
         results = await scrape_af(["Python"], "Stockholm")
 
     assert results == []
+
+
+@pytest.mark.asyncio
+async def test_extracts_publication_date():
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "hits": [
+            {
+                "headline": "Python Developer",
+                "employer": {"name": "Acme AB"},
+                "workplace_address": {"city": "Stockholm"},
+                "webpage_url": "https://example.com/job/1",
+                "publication_date": "2026-03-15T12:00:00",
+            }
+        ]
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(return_value=mock_response))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        results = await scrape_af(["Python"], "Stockholm")
+
+    assert results[0].publication_date == "2026-03-15T12:00:00"

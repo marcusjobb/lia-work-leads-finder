@@ -1,4 +1,5 @@
 from models import CompanyRaw, ContactInfo, LeadProfile, ScoreBreakdown, SearchConfig
+from pipeline.enrichment.activity_scorer import score_activity
 from pipeline.enrichment.tech_analyzer import analyze_tech
 from pipeline.enrichment.geo_scorer import score_geo
 from pipeline.enrichment.seniority_scorer import score_seniority
@@ -22,7 +23,7 @@ def _assemble(
         tech_match=tech_score,
         geo=geo_score,
         contact=contact_score,
-        activity=80.0,  # replaced in Task 3
+        activity=score_activity(company.publication_date),
         stability=_STABILITY_SCORE_DEFAULT,
         seniority=seniority_score,
     )
