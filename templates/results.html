@@ -85,20 +85,23 @@
             {% for tag in p.tech_tags %}<span class="tag">{{ tag }}</span>{% endfor %}
           </div>
           {% endif %}
-          {% if p.score_breakdown.tech_match > 0 %}
           <div class="score-bars">
+            {% set bars = [
+              ("Tech",      p.score_breakdown.tech_match),
+              ("Geo",       p.score_breakdown.geo),
+              ("Kontakt",   p.score_breakdown.contact),
+              ("Aktivitet", p.score_breakdown.activity),
+              ("Senioritet",p.score_breakdown.seniority),
+              ("Stabilitet",p.score_breakdown.stability),
+            ] %}
+            {% for label, val in bars %}
             <div class="bar-row">
-              <span>Tech</span>
-              <div class="bar"><div class="bar-fill" style="width: {{ p.score_breakdown.tech_match }}%"></div></div>
-              <span>{{ p.score_breakdown.tech_match | round(0) | int }}</span>
+              <span>{{ label }}</span>
+              <div class="bar"><div class="bar-fill" style="width: {{ val }}%"></div></div>
+              <span>{{ val | round(0) | int }}</span>
             </div>
-            <div class="bar-row">
-              <span>Geo</span>
-              <div class="bar"><div class="bar-fill" style="width: {{ p.score_breakdown.geo }}%"></div></div>
-              <span>{{ p.score_breakdown.geo | round(0) | int }}</span>
-            </div>
+            {% endfor %}
           </div>
-          {% endif %}
         </li>
         {% endfor %}
       </ul>

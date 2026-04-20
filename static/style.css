@@ -33,7 +33,7 @@ button:hover { background: #0052a3; }
 .tag { background: #f1f5f9; padding: .15rem .5rem; border-radius: 4px; font-size: .8rem; }
 .score-bars { display: flex; flex-direction: column; gap: .25rem; margin-top: .5rem; }
 .bar-row { display: flex; align-items: center; gap: .5rem; font-size: .8rem; }
-.bar-row span:first-child { width: 2.5rem; color: #666; }
+.bar-row span:first-child { width: 5rem; color: #666; }
 .bar-row span:last-child { width: 2rem; text-align: right; }
 .bar { flex: 1; background: #e2e8f0; border-radius: 2px; height: 6px; }
 .bar-fill { background: #3b82f6; height: 100%; border-radius: 2px; }
