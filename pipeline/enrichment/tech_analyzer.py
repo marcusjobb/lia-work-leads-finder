@@ -1,5 +1,7 @@
 """Tech stack analyzer — matches student skills against company job descriptions."""
 
+import re
+
 STACK_FAMILIES: dict[str, list[str]] = {
     "java": ["java", "kotlin", "spring", "maven", "gradle", "jvm"],
     "csharp": ["c#", "csharp", ".net", "dotnet", "asp.net", "asp", "blazor", "azure"],
@@ -7,6 +9,11 @@ STACK_FAMILIES: dict[str, list[str]] = {
     "javascript": ["javascript", "typescript", "node.js", "node", "react", "vue", "angular"],
     "devops": ["docker", "kubernetes", "terraform", "ci/cd", "github actions"],
 }
+
+
+def _word_match(term: str, text: str) -> bool:
+    """Check if term matches text using word boundaries (not substring)."""
+    return bool(re.search(r"\b" + re.escape(term.lower()) + r"\b", text))
 
 
 def _families_for(terms: list[str]) -> set[str]:
@@ -34,8 +41,8 @@ def analyze_tech(tech_stack: list[str], text: str) -> float:
     """
     text_lower = text.lower()
 
-    # Direct keyword hits
-    hits = sum(1 for t in tech_stack if t.lower() in text_lower)
+    # Direct keyword hits (word-boundary match to avoid java→javascript collision)
+    hits = sum(1 for t in tech_stack if _word_match(t, text_lower))
     if hits > 0:
         return min(100.0, (hits / len(tech_stack)) * 100)
 

@@ -21,3 +21,9 @@ def test_cross_family_partial():
     # Java student, C# company — different families → reduced score
     score = analyze_tech(["Java"], "Senior C# .NET developer ASP.NET")
     assert 10 <= score <= 50
+
+
+def test_java_does_not_match_javascript():
+    # "java" must not match "javascript" (substring collision)
+    score = analyze_tech(["Java"], "JavaScript frontend developer")
+    assert score < 80  # should be cross-family (25.0), not direct match
