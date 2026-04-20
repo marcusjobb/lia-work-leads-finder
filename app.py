@@ -16,6 +16,8 @@ app = FastAPI(title="LIA Leads Finder")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+_results_cache: dict[str, object] = {}
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -39,6 +41,10 @@ async def search(request: Request):
     profiles = [p for p in profiles if is_relevant(p)]
     profiles.sort(key=lambda p: p.score, reverse=True)
 
+    _results_cache.clear()
+    for p in profiles:
+        _results_cache[p.company_name] = p
+
     return templates.TemplateResponse(
         request,
         "results.html",
@@ -50,6 +56,14 @@ async def search(request: Request):
             "page_size": config.page_size,
         },
     )
+
+
+@app.get("/lead", response_class=HTMLResponse)
+async def lead_detail(request: Request, name: str = ""):
+    profile = _results_cache.get(name)
+    if not profile:
+        return HTMLResponse("<p>Lead hittades inte. <a href='/'>Ny sökning</a></p>", status_code=404)
+    return templates.TemplateResponse(request, "lead_detail.html", {"profile": profile})
 
 
 if __name__ == "__main__":

@@ -58,3 +58,10 @@ button:hover { background: #0052a3; }
 .expand-btn:hover { background: none; text-decoration: underline; }
 .tier-badge--skip { background: #f1f5f9; color: #64748b; }
 .lead-card--skip { border-left-color: #94a3b8; opacity: .75; }
+.detail-link { font-size: .8rem; color: #0066cc; text-decoration: none; white-space: nowrap; }
+.detail-link:hover { text-decoration: underline; }
+.detail-grid { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
+.detail-card { background: white; border-radius: 8px; padding: 1rem 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.detail-card--full { width: 100%; }
+.detail-section-title { font-size: 1rem; font-weight: 700; margin: 0 0 .75rem; color: #333; }
+.muted { color: #888; font-size: .9rem; }

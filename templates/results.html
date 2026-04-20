@@ -81,6 +81,7 @@
             <span class="city">{{ p.city }}</span>
             <span class="source-badge source-badge--{{ p.source }}">{{ p.source | upper }}</span>
             <span class="score">{{ p.score | round(0) | int }}p</span>
+            <a href="/lead?name={{ p.company_name | urlencode }}" class="detail-link">Detaljer</a>
             {% if p.tier == 'WEAK' or p.tier == 'SKIP' %}
             <button class="expand-btn" onclick="toggleCard(this)">Visa mer ▾</button>
             {% endif %}

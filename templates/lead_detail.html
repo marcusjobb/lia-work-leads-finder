@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ profile.company_name }} — LIA Leads Finder</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <a href="javascript:history.back()" class="back-link">← Tillbaka till resultat</a>
+
+    <div class="detail-header">
+      <div class="lead-header" style="margin-top: 1rem;">
+        <span class="tier-badge tier-badge--{{ profile.tier | lower }}">{{ profile.tier }}</span>
+        <h1 style="font-size:1.4rem; margin:0;">{{ profile.company_name }}</h1>
+        <span class="city">{{ profile.city }}</span>
+        <span class="source-badge source-badge--{{ profile.source }}">{{ profile.source | upper }}</span>
+        <span class="score">{{ profile.score | round(0) | int }}p</span>
+      </div>
+      <p class="match-reason" style="margin-top:.5rem;">{{ profile.match_reason }}</p>
+    </div>
+
+    {% if profile.tech_tags %}
+    <div class="tech-tags" style="margin-bottom:1rem;">
+      {% for tag in profile.tech_tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="detail-grid">
+
+      <section class="detail-card">
+        <h2 class="detail-section-title">Jobannons</h2>
+        {% if profile.job_title %}
+        <p>
+          {% if profile.job_url %}
+          <a href="{{ profile.job_url }}" target="_blank" rel="noopener" class="job-link">{{ profile.job_title }} ↗</a>
+          {% else %}
+          {{ profile.job_title }}
+          {% endif %}
+        </p>
+        {% else %}
+        <p class="muted">Ingen jobbtitel tillgänglig.</p>
+        {% endif %}
+        {% if profile.website %}
+        <p><a href="{{ profile.website }}" target="_blank" rel="noopener" class="job-link">{{ profile.website }} ↗</a></p>
+        {% endif %}
+      </section>
+
+      <section class="detail-card">
+        <h2 class="detail-section-title">Kontakt</h2>
+        {% if profile.contact.email %}
+        <p>📧 <a href="mailto:{{ profile.contact.email }}" class="job-link">{{ profile.contact.email }}</a></p>
+        {% endif %}
+        {% if profile.contact.contact_url %}
+        <p>📋 <a href="{{ profile.contact.contact_url }}" target="_blank" rel="noopener" class="job-link">Kontaktsida ↗</a></p>
+        {% endif %}
+        {% if profile.contact.careers_page %}
+        <p>💼 <a href="{{ profile.contact.careers_page }}" target="_blank" rel="noopener" class="job-link">Karriärsida ↗</a></p>
+        {% endif %}
+        {% if profile.contact.linkedin_url %}
+        <p>🔗 <a href="{{ profile.contact.linkedin_url }}" target="_blank" rel="noopener" class="job-link">LinkedIn ↗</a></p>
+        {% endif %}
+        {% if not profile.contact.email and not profile.contact.contact_url and not profile.contact.careers_page and not profile.contact.linkedin_url %}
+        <p class="muted">Ingen kontaktinfo hittades.</p>
+        {% endif %}
+      </section>
+
+      <section class="detail-card detail-card--full">
+        <h2 class="detail-section-title">Poängfördelning</h2>
+        <div class="score-bars">
+          {% set bars = [
+            ("Tech match",  profile.score_breakdown.tech_match,  "30%"),
+            ("Geografisk",  profile.score_breakdown.geo,         "25%"),
+            ("Kontakt",     profile.score_breakdown.contact,     "15%"),
+            ("Aktivitet",   profile.score_breakdown.activity,    "10%"),
+            ("Senioritet",  profile.score_breakdown.seniority,   "15%"),
+            ("Stabilitet",  profile.score_breakdown.stability,    "5%"),
+          ] %}
+          {% for label, val, weight in bars %}
+          <div class="bar-row">
+            <span style="width:7rem;">{{ label }}</span>
+            <div class="bar"><div class="bar-fill" style="width: {{ val }}%"></div></div>
+            <span>{{ val | round(0) | int }}</span>
+            <span class="muted" style="font-size:.75rem; width:2.5rem; text-align:right;">×{{ weight }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+    </div>
+  </main>
+</body>
+</html>
