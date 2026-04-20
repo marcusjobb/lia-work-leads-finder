@@ -29,7 +29,18 @@
       <button class="btn-page btn-nav" disabled title="Föregående sida">&#8592;</button>
       {% endif %}
 
-      <span class="page-info">Sida {{ page }}</span>
+      {% set total_pages = ((total + page_size - 1) // page_size) %}
+      <form method="post" action="/search" style="display:inline">
+        <input type="hidden" name="city" value="{{ config.city }}">
+        <input type="hidden" name="tech_stack" value="{{ config.tech_stack | join(', ') }}">
+        {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
+        <input type="hidden" name="page_size" value="{{ page_size }}">
+        <select name="page" class="select-page-size" onchange="this.form.submit()">
+          {% for p in range(1, total_pages + 1) %}
+          <option value="{{ p }}" {% if p == page %}selected{% endif %}>Sida {{ p }} av {{ total_pages }}</option>
+          {% endfor %}
+        </select>
+      </form>
 
       <form method="post" action="/search" style="display:inline">
         <input type="hidden" name="city" value="{{ config.city }}">
