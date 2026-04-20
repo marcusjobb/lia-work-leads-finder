@@ -1,7 +1,7 @@
 JUNIOR_SIGNALS = {
     "junior", "trainee", "praktikant", "lärling", "nybörjare",
     "nyexaminerad", "nyutexaminerad", "entry level", "lia", "praktik",
-    "internship", "intern", "internutbildning",
+    "internship", "internutbildning",
 }
 SENIOR_SIGNALS = {
     "senior", "lead", "principal", "architect", "arkitekt",
