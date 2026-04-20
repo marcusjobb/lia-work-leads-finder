@@ -7,12 +7,12 @@ def test_weights_sum_to_one():
 
 
 def test_compute_score_perfect():
-    bd = ScoreBreakdown(tech_match=100, geo=100, contact=100, activity=100, stability=100)
+    bd = ScoreBreakdown(tech_match=100, geo=100, contact=100, activity=100, stability=100, seniority=100)
     assert compute_score(bd) == 100.0
 
 
 def test_compute_score_weighted():
-    bd = ScoreBreakdown(tech_match=100, geo=0, contact=0, activity=0, stability=0)
+    bd = ScoreBreakdown(tech_match=100, geo=0, contact=0, activity=0, stability=0, seniority=0)
     # Only tech_match (30%) contributes
     assert abs(compute_score(bd) - 30.0) < 0.01
 

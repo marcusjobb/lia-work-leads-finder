@@ -32,8 +32,9 @@ class ScoreBreakdown(BaseModel):
     contact: float
     activity: float
     stability: float
+    seniority: float
 
-    @field_validator("tech_match", "geo", "contact", "activity", "stability")
+    @field_validator("tech_match", "geo", "contact", "activity", "stability", "seniority")
     @classmethod
     def must_be_0_to_100(cls, v: float) -> float:
         if not (0.0 <= v <= 100.0):

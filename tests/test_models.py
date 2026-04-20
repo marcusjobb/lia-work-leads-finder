@@ -17,7 +17,7 @@ def test_lead_profile_tier_field():
         contact=ContactInfo(),
         score=75.0,
         score_breakdown=ScoreBreakdown(
-            tech_match=80, geo=100, contact=0, activity=80, stability=50
+            tech_match=80, geo=100, contact=0, activity=80, stability=50, seniority=50
         ),
         match_reason="Matchar Java, Göteborg",
         tier="STRONG",
@@ -33,11 +33,11 @@ def test_company_raw_optional_fields():
 
 def test_score_breakdown_rejects_out_of_range():
     with pytest.raises(ValidationError):
-        ScoreBreakdown(tech_match=150, geo=100, contact=0, activity=80, stability=50)
+        ScoreBreakdown(tech_match=150, geo=100, contact=0, activity=80, stability=50, seniority=50)
 
 
 def test_score_breakdown_accepts_valid_scores():
-    breakdown = ScoreBreakdown(tech_match=85, geo=100, contact=0, activity=80, stability=50)
+    breakdown = ScoreBreakdown(tech_match=85, geo=100, contact=0, activity=80, stability=50, seniority=50)
     assert breakdown.tech_match == 85
     assert breakdown.geo == 100
     assert breakdown.contact == 0
@@ -53,7 +53,7 @@ def test_lead_profile_score_must_be_0_to_100():
             tech_tags=["Python"],
             contact=ContactInfo(),
             score=150,
-            score_breakdown=ScoreBreakdown(tech_match=80, geo=70, contact=60, activity=50, stability=40),
+            score_breakdown=ScoreBreakdown(tech_match=80, geo=70, contact=60, activity=50, stability=40, seniority=50),
             match_reason="High tech match",
             tier="STRONG"
         )
@@ -66,7 +66,7 @@ def test_lead_profile_score_accepts_valid_range():
         tech_tags=["Python"],
         contact=ContactInfo(),
         score=75,
-        score_breakdown=ScoreBreakdown(tech_match=80, geo=70, contact=60, activity=50, stability=40),
+        score_breakdown=ScoreBreakdown(tech_match=80, geo=70, contact=60, activity=50, stability=40, seniority=50),
         match_reason="High tech match",
         tier="STRONG"
     )

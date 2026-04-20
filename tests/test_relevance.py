@@ -5,7 +5,7 @@ from quality_gate import compute_score, assign_tier
 
 def _make_profile(tech_score: float) -> LeadProfile:
     bd = ScoreBreakdown(
-        tech_match=tech_score, geo=100, contact=0, activity=80, stability=50
+        tech_match=tech_score, geo=100, contact=0, activity=80, stability=50, seniority=50
     )
     score = compute_score(bd)
     return LeadProfile(

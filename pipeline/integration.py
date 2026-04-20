@@ -1,6 +1,7 @@
 from models import CompanyRaw, ContactInfo, LeadProfile, ScoreBreakdown, SearchConfig
 from pipeline.enrichment.tech_analyzer import analyze_tech
 from pipeline.enrichment.geo_scorer import score_geo
+from pipeline.enrichment.seniority_scorer import score_seniority
 from quality_gate import assign_tier, compute_score
 
 # MVP defaults for unimplemented enrichers
@@ -14,6 +15,7 @@ def build_profile(company: CompanyRaw, config: SearchConfig) -> LeadProfile:
 
     tech_score = analyze_tech(config.tech_stack, analysis_text)
     geo_score = score_geo(company.city, config.city, config.all_sweden)
+    seniority_score = score_seniority(analysis_text)
 
     breakdown = ScoreBreakdown(
         tech_match=tech_score,
@@ -21,6 +23,7 @@ def build_profile(company: CompanyRaw, config: SearchConfig) -> LeadProfile:
         contact=_CONTACT_SCORE_DEFAULT,
         activity=_ACTIVITY_SCORE_DEFAULT,
         stability=_STABILITY_SCORE_DEFAULT,
+        seniority=seniority_score,
     )
     score = compute_score(breakdown)
     tier = assign_tier(score)
