@@ -12,7 +12,11 @@ logger = logging.getLogger(__name__)
 async def scrape_indeed(
     tech_stack: list[str], city: str, all_sweden: bool = False
 ) -> list[CompanyRaw]:
-    """Scrape Indeed.se via Playwright → list[CompanyRaw]. Returns [] on error."""
+    """Scrape Indeed.se via Playwright → list[CompanyRaw]. Returns [] on error.
+
+    NOTE: Indeed.se blocks headless browsers (Cloudflare). This consistently returns [].
+    Kept as a placeholder — add cookie injection or residential proxies to make it work.
+    """
     query = " ".join(tech_stack[:3])
     location = "" if all_sweden else city
     url = (
