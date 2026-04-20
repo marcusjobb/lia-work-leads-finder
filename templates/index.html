@@ -21,8 +21,24 @@
         <input type="checkbox" name="all_sweden"> Sök i hela Sverige
       </label>
 
-      <button type="submit">Hitta LIA-företag</button>
+      <button type="submit" id="submit-btn">
+        <span id="btn-text">Hitta LIA-företag</span>
+        <span id="btn-spinner" hidden>
+          <svg class="spinner" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-dashoffset="10"/>
+          </svg>
+          Söker…
+        </span>
+      </button>
     </form>
   </main>
+  <script>
+    document.querySelector('.search-form').addEventListener('submit', function() {
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      document.getElementById('btn-text').hidden = true;
+      document.getElementById('btn-spinner').hidden = false;
+    });
+  </script>
 </body>
 </html>

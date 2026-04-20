@@ -7,7 +7,10 @@ h1 { font-size: 1.8rem; margin-bottom: .25rem; }
 label { font-weight: 600; font-size: .9rem; }
 input[type=text] { padding: .5rem .75rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
 .checkbox-label { display: flex; align-items: center; gap: .5rem; font-weight: normal; }
-button { background: #0066cc; color: white; border: none; padding: .6rem 1.2rem; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+button { background: #0066cc; color: white; border: none; padding: .6rem 1.2rem; border-radius: 4px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .5rem; }
+button:disabled { background: #4d94e0; cursor: not-allowed; }
+.spinner { width: 1em; height: 1em; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 button:hover { background: #0052a3; }
 .back-link { font-size: .9rem; color: #0066cc; text-decoration: none; }
 .result-count { color: #555; margin: .5rem 0 1rem; }
