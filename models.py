@@ -1,5 +1,5 @@
 from typing import Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class SearchConfig(BaseModel):
@@ -33,6 +33,13 @@ class ScoreBreakdown(BaseModel):
     activity: float
     stability: float
 
+    @field_validator("tech_match", "geo", "contact", "activity", "stability")
+    @classmethod
+    def must_be_0_to_100(cls, v: float) -> float:
+        if not (0.0 <= v <= 100.0):
+            raise ValueError(f"Score must be 0–100, got {v}")
+        return v
+
 
 class LeadProfile(BaseModel):
     company_name: str
@@ -41,7 +48,7 @@ class LeadProfile(BaseModel):
     city: str
     tech_tags: list[str]
     contact: ContactInfo
-    score: float
+    score: float = Field(ge=0.0, le=100.0)
     score_breakdown: ScoreBreakdown
     match_reason: str
     tier: Literal["STRONG", "GOOD", "WEAK", "SKIP"]
