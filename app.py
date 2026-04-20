@@ -10,6 +10,7 @@ from pipeline.init import parse_config
 from pipeline.discovery.indeed import scrape_indeed
 from pipeline.discovery.af_scraper import scrape_af, PAGE_SIZE
 from pipeline.integration import build_profile_async
+from pipeline.enrichment.program_scraper import scrape_program
 from pipeline.validators.relevance import is_relevant
 
 app = FastAPI(title="LIA Leads Finder")
@@ -30,7 +31,6 @@ async def search(request: Request):
     config = parse_config(dict(form))
 
     if config.program_url and not config.tech_stack:
-        from pipeline.enrichment.program_scraper import scrape_program
         config = config.model_copy(update={"tech_stack": await scrape_program(config.program_url)})
 
     indeed_results, af_result = await asyncio.gather(
