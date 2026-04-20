@@ -9,6 +9,7 @@ from models import SearchConfig
 from pipeline.init import parse_config
 from pipeline.discovery.indeed import scrape_indeed
 from pipeline.discovery.af_scraper import scrape_af, PAGE_SIZE
+from pipeline.discovery.company_scraper import scrape_companies
 from pipeline.integration import build_profile_async
 from pipeline.enrichment.program_scraper import scrape_program
 from pipeline.validators.relevance import is_relevant
@@ -33,13 +34,14 @@ async def search(request: Request):
     if config.program_url and not config.tech_stack:
         config = config.model_copy(update={"tech_stack": await scrape_program(config.program_url)})
 
-    indeed_results, af_result = await asyncio.gather(
+    indeed_results, af_result, allabolag_results = await asyncio.gather(
         scrape_indeed(config.tech_stack, config.city, config.all_sweden),
         scrape_af(config.tech_stack, config.city, config.all_sweden, page=config.page, page_size=config.page_size),
+        scrape_companies(config.tech_stack, config.city),
     )
     af_companies, total_af = af_result
 
-    raw_companies = indeed_results + af_companies
+    raw_companies = indeed_results + af_companies + allabolag_results
 
     profiles = list(await asyncio.gather(*[build_profile_async(c, config) for c in raw_companies]))
     profiles = [p for p in profiles if is_relevant(p)]
