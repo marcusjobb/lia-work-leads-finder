@@ -48,6 +48,7 @@ async def scrape_af(
             companies.append(
                 CompanyRaw(
                     name=name,
+                    website=employer.get("url") or None,
                     city=address.get("city") or address.get("municipality") or city,
                     source="af",
                     job_title=hit.get("headline"),
