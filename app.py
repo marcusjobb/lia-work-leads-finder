@@ -4,7 +4,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 import yaml
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -21,8 +21,8 @@ from pipeline.init import parse_config
 from pipeline.discovery.indeed import scrape_indeed
 from pipeline.discovery.af_scraper import scrape_af, PAGE_SIZE
 from pipeline.discovery.company_scraper import scrape_companies
-from pipeline.integration import build_profile_async
-from pipeline.enrichment.program_scraper import scrape_program
+from pipeline.integration import build_profile_async, build_profile_fast
+from pipeline.enrichment.program_scraper import scrape_program, extract_keywords_from_pdf
 from pipeline.enrichment.geocoder import geocode
 from pipeline.validators.relevance import is_relevant
 from pipeline.validators.completeness import is_complete
@@ -87,7 +87,8 @@ def _load_letter(company_name: str) -> str | None:
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse(request, "index.html")
+    student = _load_student()
+    return templates.TemplateResponse(request, "index.html", {"student": student})
 
 
 @app.get("/profile", response_class=HTMLResponse)
@@ -107,8 +108,20 @@ async def analyze_program_url(request: Request):
     url = form.get("program_url", "").strip()
     if not url:
         return RedirectResponse("/profile", status_code=303)
-    keywords = await scrape_program(url)
-    return RedirectResponse(f"/profile?keywords={','.join(keywords)}", status_code=303)
+    scraped = await scrape_program(url)
+    student = _load_student()
+    # Merge: scraped first (new findings), then existing tech_stack — deduped, order preserved
+    merged = list(dict.fromkeys(scraped + student.tech_stack))
+    return RedirectResponse(f"/profile?keywords={','.join(merged)}", status_code=303)
+
+
+@app.post("/profile/analyze-pdf")
+async def analyze_pdf_upload(request: Request, pdf: UploadFile = File(...)):
+    data = await pdf.read()
+    scraped = await extract_keywords_from_pdf(data)
+    student = _load_student()
+    merged = list(dict.fromkeys(scraped + student.tech_stack))
+    return RedirectResponse(f"/profile?keywords={','.join(merged)}", status_code=303)
 
 
 @app.post("/profile", response_class=HTMLResponse)
@@ -158,9 +171,21 @@ async def search(request: Request):
     raw_companies = indeed_results + af_companies + allabolag_results
 
     center_coords = await geocode(config.city) if config.radius_km > 0 else None
-    all_profiles = list(await asyncio.gather(*[build_profile_async(c, config, center_coords) for c in raw_companies]))
-    all_profiles = [p for p in all_profiles if is_relevant(p) and is_complete(p) and is_reachable(p)]
-    all_profiles.sort(key=lambda p: p.score, reverse=True)
+
+    # Pass 1 — fast scoring without API calls, used to rank all candidates
+    _TOP_N = 30
+    fast_profiles = list(await asyncio.gather(*[build_profile_fast(c, config, center_coords) for c in raw_companies]))
+    fast_profiles = [p for p in fast_profiles if is_relevant(p) and is_complete(p) and is_reachable(p)]
+    fast_profiles.sort(key=lambda p: p.score, reverse=True)
+
+    # Pass 2 — full enrichment (stability API + contact) for top N only
+    name_to_raw = {c.name: c for c in raw_companies}
+    top_raw = [name_to_raw[p.company_name] for p in fast_profiles[:_TOP_N] if p.company_name in name_to_raw]
+    enriched = list(await asyncio.gather(*[build_profile_async(c, config, center_coords) for c in top_raw]))
+
+    enriched_names = {p.company_name for p in enriched}
+    rest = [p for p in fast_profiles[_TOP_N:] if p.company_name not in enriched_names]
+    all_profiles = sorted(enriched + rest, key=lambda p: p.score, reverse=True)
 
     _save_profiles(all_profiles)
 
@@ -184,11 +209,37 @@ async def search(request: Request):
 
 
 @app.get("/lead", response_class=HTMLResponse)
-async def lead_detail(request: Request, name: str = ""):
+async def lead_detail(request: Request, name: str = "", enriched: bool = False):
     profile = _find_profile(name)
     if not profile:
         return HTMLResponse("<p>Lead hittades inte. <a href='/'>Ny sökning</a></p>", status_code=404)
-    return templates.TemplateResponse(request, "lead_detail.html", {"profile": profile})
+    return templates.TemplateResponse(request, "lead_detail.html", {"profile": profile, "enriched": enriched})
+
+
+@app.post("/enrich")
+async def enrich_lead(request: Request):
+    form = await request.form()
+    company_name = form.get("company_name", "")
+    profile = _find_profile(company_name)
+    if not profile:
+        return HTMLResponse("<p>Lead hittades inte.</p>", status_code=404)
+
+    raw = CompanyRaw(
+        name=profile.company_name,
+        city=profile.city,
+        website=profile.website,
+        source=profile.source,
+        job_title=profile.job_title,
+        job_url=profile.job_url,
+    )
+    config = SearchConfig(city=profile.city, tech_stack=profile.tech_tags or [""])
+    enriched_profile = await build_profile_async(raw, config)
+
+    profiles = _load_profiles()
+    profiles = [enriched_profile if p.company_name == company_name else p for p in profiles]
+    _save_profiles(profiles)
+
+    return RedirectResponse(f"/lead?name={company_name}&enriched=1", status_code=303)
 
 
 @app.get("/export-leads")

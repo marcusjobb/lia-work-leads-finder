@@ -8,21 +8,36 @@
 </head>
 <body>
   <main class="container">
-    <h1>LIA Leads Finder</h1>
-    <p class="subtitle">Hitta LIA-företag som matchar din tech stack</p>
+    <div class="page-header">
+      <div>
+        <h1>LIA Leads Finder</h1>
+        <p class="subtitle">Hitta LIA-företag som matchar din tech stack</p>
+      </div>
+      <a href="/profile" class="btn-profile">Min profil</a>
+    </div>
     <form method="post" action="/search" class="search-form">
       <label for="city">Stad</label>
-      <input type="text" id="city" name="city" placeholder="t.ex. Göteborg" required>
+      <div class="city-row">
+        <input type="text" id="city" name="city" placeholder="t.ex. Göteborg">
+        <select id="radius_km" name="radius_km" title="Sökradie">
+          <option value="0">Endast stan</option>
+          <option value="25">+25 km</option>
+          <option value="50">+50 km</option>
+          <option value="80">+80 km</option>
+          <option value="150">+150 km</option>
+        </select>
+      </div>
 
       <label for="tech_stack">Tech stack <small>(kommaseparerat)</small></label>
-      <input type="text" id="tech_stack" name="tech_stack" placeholder="t.ex. Java, Spring Boot">
+      <input type="text" id="tech_stack" name="tech_stack" placeholder="t.ex. Java, Spring Boot"
+             value="{{ student.tech_stack | join(', ') if student and student.tech_stack else '' }}">
 
       <label for="program_url">Programsida URL <small>(valfri)</small></label>
       <input type="url" id="program_url" name="program_url" placeholder="t.ex. https://www.yh-skolan.se/program/systemutvecklare">
       <small class="hint">Om URL anges och tech-stack lämnas tom fylls den i automatiskt.</small>
 
       <label class="checkbox-label">
-        <input type="checkbox" name="all_sweden"> Sök i hela Sverige
+        <input type="checkbox" name="all_sweden" id="all_sweden" onchange="toggleCity(this)"> Sök i hela Sverige
       </label>
 
       <button type="submit" id="submit-btn">
@@ -37,6 +52,11 @@
     </form>
   </main>
   <script>
+    function toggleCity(cb) {
+      const cityInput = document.getElementById('city');
+      cityInput.disabled = cb.checked;
+      cityInput.placeholder = cb.checked ? 'Hela Sverige' : 't.ex. Göteborg';
+    }
     document.querySelector('.search-form').addEventListener('submit', function() {
       const btn = document.getElementById('submit-btn');
       btn.disabled = true;

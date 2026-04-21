@@ -40,46 +40,128 @@
       <hr style="border:none; border-top:1px solid #e2e8f0; margin:.5rem 0;">
 
       <label for="program_url">Programsida URL <small>(valfri — för att hämta tech-stack)</small></label>
-      <div style="display:flex; gap:.5rem; align-items:center;">
-        <input type="url" id="program_url" name="program_url"
-               value="{{ student.program_url or '' }}"
-               placeholder="t.ex. https://www.yh-skolan.se/program/javautvecklare"
-               style="flex:1;">
-      </div>
+      <input type="url" id="program_url" name="program_url"
+             value="{{ student.program_url or '' }}"
+             placeholder="t.ex. https://www.yh-skolan.se/program/javautvecklare">
+      <small class="muted" style="margin-top:-.25rem;">
+        Tips: klistra in en direkt PDF-länk (kursplan) för bäst resultat — t.ex. <em>https://skola.se/kursplan.pdf</em>
+      </small>
 
-      {% if analyzed_keywords %}
+      <label>Tech stack</label>
+      {% set all_keywords = (analyzed_keywords if analyzed_keywords else student.tech_stack) %}
       <div class="keyword-section">
-        <p class="keyword-intro">Hittade tekniker från din utbildningssida — kryssa i vad som stämmer:</p>
-        <div class="keyword-grid">
-          {% for kw in analyzed_keywords %}
-          <label class="checkbox-label keyword-item">
-            <input type="checkbox" name="checked_keywords" value="{{ kw }}"
-                   {% if kw in student.tech_stack %}checked{% endif %}>
-            {{ kw }}
-          </label>
+        {% if analyzed_keywords %}
+        <p class="keyword-intro">Hittade tekniker — klicka för att markera/avmarkera, × för att ta bort:</p>
+        {% endif %}
+        <div class="chip-list" id="chip-list">
+          {% for kw in all_keywords %}
+          {% set active = (kw in student.tech_stack) or (not analyzed_keywords) %}
+          <span class="chip {% if active %}chip--active{% endif %}" data-value="{{ kw }}">
+            {{ kw }}<button type="button" class="chip-remove" aria-label="Ta bort">×</button>
+            <input type="hidden" name="checked_keywords" value="{{ kw }}" {% if not active %}disabled{% endif %}>
+          </span>
           {% endfor %}
         </div>
-        <label for="custom_buzzwords" style="margin-top:.75rem;">
-          Egna buzzwords <small>(kommaseparerat — t.ex. Scrum, CI/CD, Agil)</small>
-        </label>
-        <input type="text" id="custom_buzzwords" name="custom_buzzwords"
-               placeholder="Lägg till egna tekniker eller begrepp">
+        <div class="chip-add-row">
+          <input type="text" id="add-keyword-input" placeholder="Lägg till t.ex. Scrum, CI/CD…" autocomplete="off">
+          <button type="button" id="add-keyword-btn" class="btn-toggle">+ Lägg till</button>
+        </div>
       </div>
-      {% else %}
-      <label for="tech_stack">Tech stack <small>(kommaseparerat)</small></label>
-      <input type="text" id="tech_stack" name="tech_stack" value="{{ student.tech_stack | join(', ') }}">
-      {% endif %}
 
       <button type="submit">Spara profil</button>
     </form>
 
-    <form method="post" action="/profile/analyze-url" style="margin-top:.75rem;">
-      <input type="hidden" name="program_url" id="analyze_url_hidden">
-      <button type="submit" class="btn-toggle"
-              onclick="document.getElementById('analyze_url_hidden').value=document.getElementById('program_url').value">
-        Analysera URL och visa tech-keywords ↗
+    <form method="post" action="/profile/analyze-pdf" enctype="multipart/form-data" id="pdf-form" style="margin-top:.75rem; display:flex; gap:.5rem; align-items:center;">
+      <input type="file" name="pdf" accept=".pdf" id="pdf-input" style="font-size:.9rem;">
+      <button type="submit" id="pdf-btn" class="btn-toggle">
+        <svg class="spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+             style="display:none; width:1em; height:1em; vertical-align:middle; margin-right:.3em;">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-dashoffset="10"/>
+        </svg>
+        <span id="pdf-label">Analysera PDF ↗</span>
       </button>
     </form>
+
+    <form method="post" action="/profile/analyze-url" id="analyze-form" style="margin-top:.5rem;">
+      <input type="hidden" name="program_url" id="analyze_url_hidden">
+      <button type="submit" id="analyze-btn" class="btn-toggle">
+        <svg id="analyze-spinner" class="spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+             style="display:none; width:1em; height:1em; vertical-align:middle; margin-right:.3em;">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-dashoffset="10"/>
+        </svg>
+        <span id="analyze-label">Analysera URL och visa tech-keywords ↗</span>
+      </button>
+    </form>
+
+    <script>
+      // Analyze URL
+      document.getElementById('analyze-form').addEventListener('submit', function(e) {
+        var url = document.getElementById('program_url').value.trim();
+        if (!url) { e.preventDefault(); return; }
+        document.getElementById('analyze_url_hidden').value = url;
+        var btn = document.getElementById('analyze-btn');
+        btn.disabled = true;
+        document.getElementById('analyze-spinner').style.display = 'inline-block';
+        document.getElementById('analyze-label').textContent = 'Analyserar…';
+      });
+
+      // Analyze PDF upload
+      document.getElementById('pdf-form').addEventListener('submit', function(e) {
+        if (!document.getElementById('pdf-input').files.length) { e.preventDefault(); return; }
+        var btn = document.getElementById('pdf-btn');
+        btn.disabled = true;
+        btn.querySelector('.spinner').style.display = 'inline-block';
+        document.getElementById('pdf-label').textContent = 'Analyserar…';
+      });
+
+      // Chip tag UI
+      var list = document.getElementById('chip-list');
+      if (list) {
+        // Toggle chip active/inactive on click (not on × button)
+        list.addEventListener('click', function(e) {
+          if (e.target.classList.contains('chip-remove')) {
+            var chip = e.target.closest('.chip');
+            chip.remove();
+            return;
+          }
+          var chip = e.target.closest('.chip');
+          if (!chip) return;
+          var active = chip.classList.toggle('chip--active');
+          chip.querySelector('input[type=hidden]').disabled = !active;
+        });
+
+        // Add new keyword
+        function addKeyword(val) {
+          val = val.trim();
+          if (!val) return;
+          // Check not already in list
+          var existing = Array.from(list.querySelectorAll('.chip')).map(c => c.dataset.value.toLowerCase());
+          if (existing.includes(val.toLowerCase())) return;
+          var chip = document.createElement('span');
+          chip.className = 'chip chip--active';
+          chip.dataset.value = val;
+          chip.innerHTML = val +
+            '<button type="button" class="chip-remove" aria-label="Ta bort">×</button>' +
+            '<input type="hidden" name="checked_keywords" value="' + val.replace(/"/g, '&quot;') + '">';
+          list.appendChild(chip);
+        }
+
+        document.getElementById('add-keyword-btn').addEventListener('click', function() {
+          var inp = document.getElementById('add-keyword-input');
+          inp.value.split(',').forEach(function(v) { addKeyword(v); });
+          inp.value = '';
+          inp.focus();
+        });
+
+        document.getElementById('add-keyword-input').addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this.value.split(',').forEach(function(v) { addKeyword(v); });
+            this.value = '';
+          }
+        });
+      }
+    </script>
 
   </main>
 </body>

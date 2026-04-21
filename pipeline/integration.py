@@ -1,10 +1,11 @@
 from models import CompanyRaw, ContactInfo, LeadProfile, ScoreBreakdown, SearchConfig
 from pipeline.enrichment.activity_scorer import score_activity
 from pipeline.enrichment.tech_analyzer import analyze_tech
-from pipeline.enrichment.geo_scorer import score_geo
+from pipeline.enrichment.geo_scorer import score_geo, score_geo_async
 from pipeline.enrichment.seniority_scorer import score_seniority
-from pipeline.enrichment.contact_finder import find_contact
+from pipeline.enrichment.contact_finder import find_contact, find_contact_from_api
 from pipeline.enrichment.stability_scorer import score_stability
+from pipeline.enrichment.company_api import fetch_company
 from quality_gate import assign_tier, compute_score
 
 _STABILITY_SCORE_DEFAULT = 50.0
@@ -16,10 +17,12 @@ def _assemble(
     contact_info: ContactInfo,
     contact_score: float,
     stability: float = _STABILITY_SCORE_DEFAULT,
+    geo_score: float | None = None,
 ) -> LeadProfile:
     analysis_text = " ".join(filter(None, [company.job_title, company.description]))
     tech_score = analyze_tech(config.tech_stack, analysis_text)
-    geo_score = score_geo(company.city, config.city, config.all_sweden)
+    if geo_score is None:
+        geo_score = score_geo(company.city, config.city, config.all_sweden)
     seniority_score = score_seniority(analysis_text)
     breakdown = ScoreBreakdown(
         tech_match=tech_score,
@@ -58,8 +61,39 @@ def build_profile(company: CompanyRaw, config: SearchConfig) -> LeadProfile:
     return _assemble(company, config, ContactInfo(), 0.0)
 
 
-async def build_profile_async(company: CompanyRaw, config: SearchConfig) -> LeadProfile:
-    """Async build — scrapes for contact info and company stability."""
-    contact_info, contact_score = await find_contact(company.website)
+async def build_profile_fast(
+    company: CompanyRaw,
+    config: SearchConfig,
+    center_coords: tuple[float, float] | None = None,
+) -> LeadProfile:
+    """Pass 1: no external API calls. stability=50, contact=empty. Used for initial ranking."""
+    geo_score = await score_geo_async(
+        company.city, config.city, config.all_sweden, center_coords, config.radius_km
+    )
+    return _assemble(company, config, ContactInfo(), 0.0, stability=50.0, geo_score=geo_score)
+
+
+async def build_profile_async(
+    company: CompanyRaw,
+    config: SearchConfig,
+    center_coords: tuple[float, float] | None = None,
+) -> LeadProfile:
+    """Async build — enriches via company APIs (cached) then falls back to scraping."""
+    import asyncio
+    api_data, geo_score = await asyncio.gather(
+        fetch_company(company.name, company.city),
+        score_geo_async(company.city, config.city, config.all_sweden, center_coords, config.radius_km),
+    )
+
+    # Stability: use API data (financial health or age)
     stability = await score_stability(company.name, company.city)
-    return _assemble(company, config, contact_info, contact_score, stability)
+
+    # Contact: prefer API data, fall back to website scraping
+    api_contact = await find_contact_from_api(api_data.website, api_data.linkedin)
+    if api_contact:
+        contact_info, contact_score = api_contact
+    else:
+        website = api_data.website or company.website
+        contact_info, contact_score = await find_contact(website)
+
+    return _assemble(company, config, contact_info, contact_score, stability, geo_score)

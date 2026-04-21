@@ -1,24 +1,33 @@
+import io
+import json
 import re
 import httpx
+import pdfplumber
 from bs4 import BeautifulSoup
+from llm_client import complete
 
 KNOWN_TECH = [
+    # Languages
     "Python", "Java", "JavaScript", "TypeScript", "C#", "C++",
     "Kotlin", "Swift", "Go", "Rust", "PHP", "Ruby",
-    "React", "Vue", "Angular", "Node.js",
-    "Spring", "Django", "FastAPI", "Flask", ".NET",
-    "Docker", "Kubernetes", "Terraform",
-    "PostgreSQL", "MySQL", "MongoDB", "Redis",
-    "AWS", "Azure", "GCP",
-    "Linux", "Git",
+    # Frontend
+    "React", "Vue", "Angular", "Node.js", "HTML", "CSS",
+    # Backend frameworks
+    "Spring Boot", "Spring", "Django", "FastAPI", "Flask", ".NET",
+    # Data & databases
+    "SQL", "PostgreSQL", "MySQL", "MongoDB", "Redis", "Databaser",
+    "JPA", "Hibernate",
+    # DevOps & cloud
+    "Docker", "Kubernetes", "Terraform", "DevOps", "CI/CD",
+    "AWS", "Azure", "GCP", "Linux", "Git",
+    # Java ecosystem
+    "Maven", "Gradle", "JUnit", "REST", "Microservices",
+    # Agile & process
+    "Scrum", "Agile",
 ]
 
-# Pre-compile patterns. Use word boundaries, but handle special chars in names.
-# For "C#", "C++", ".NET", "Node.js" — use lookahead/lookbehind for non-alnum context.
 def _build_pattern(term: str) -> re.Pattern:
     escaped = re.escape(term)
-    # Word boundary \b works on \w chars. For terms ending/starting with special chars,
-    # use negative lookahead/lookbehind for word characters.
     return re.compile(r"(?<!\w)" + escaped + r"(?!\w)", re.IGNORECASE)
 
 _PATTERNS: list[tuple[str, re.Pattern]] = [
@@ -26,24 +35,94 @@ _PATTERNS: list[tuple[str, re.Pattern]] = [
 ]
 
 
-async def scrape_program(url: str) -> list[str]:
-    """Fetch a program page URL and extract tech stack keywords. Returns list of tech terms."""
+def _match_keywords(text: str) -> list[str]:
+    matched: list[str] = []
+    seen: set[str] = set()
+    for canonical, pattern in _PATTERNS:
+        if canonical not in seen and pattern.search(text):
+            matched.append(canonical)
+            seen.add(canonical)
+    return matched
+
+
+async def _extract_with_ai(text: str) -> list[str]:
+    """Send program text to LLM, return list of tech keywords. Empty list on failure."""
+    if not text.strip():
+        return []
+    prompt = (
+        "Extract technology keywords relevant to a software developer's CV from this educational program description. "
+        "Include: programming languages, frameworks, libraries, databases, cloud platforms, DevOps tools, "
+        "version control, methodologies (Agile/Scrum/Kanban), and tech-specific course names. "
+        "Exclude: hardware specs (CPU, RAM, SSD, GPU), operating system versions (Windows 11, macOS), "
+        "general terms (Internet, IT), and non-tech administrative terms. "
+        "Return ONLY a JSON array of strings, no explanation. "
+        'Example: ["Java", "Spring Boot", "SQL", "Docker", "Git", "Scrum", "REST"]\n\n'
+        f"Text:\n{text[:8000]}"
+    )
     try:
-        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+        response = await complete(prompt)
+        match = re.search(r"\[.*?\]", response, re.DOTALL)
+        if match:
+            items = json.loads(match.group())
+            return [str(i).strip() for i in items if str(i).strip()]
+    except Exception:
+        pass
+    return []
+
+
+async def _extract_from_pdf_bytes(data: bytes) -> list[str]:
+    with pdfplumber.open(io.BytesIO(data)) as pdf:
+        text = " ".join(page.extract_text() or "" for page in pdf.pages)
+    ai = await _extract_with_ai(text)
+    return ai or _match_keywords(text)
+
+
+async def scrape_program(url: str) -> list[str]:
+    """Fetch a program page (HTML or PDF URL) and extract tech stack keywords.
+    For HTML pages, also fetches any linked PDFs to get full course details."""
+    try:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
             response = await client.get(url)
             response.raise_for_status()
-            html = response.text
+            content_type = response.headers.get("content-type", "")
+            if "pdf" in content_type or url.lower().endswith(".pdf"):
+                return await _extract_from_pdf_bytes(response.content)
 
-        soup = BeautifulSoup(html, "html.parser")
-        text = soup.get_text(separator=" ")
+            soup = BeautifulSoup(response.text, "html.parser")
+            text = soup.get_text(separator=" ")
 
-        matched: list[str] = []
-        seen: set[str] = set()
-        for canonical, pattern in _PATTERNS:
-            if canonical not in seen and pattern.search(text):
-                matched.append(canonical)
-                seen.add(canonical)
+            # Also fetch linked PDFs on the page (course plans, curricula)
+            base = url.rsplit("/", 1)[0]
+            pdf_links = [
+                tag["href"] if tag["href"].startswith("http") else base + "/" + tag["href"].lstrip("/")
+                for tag in soup.find_all("a", href=True)
+                if tag["href"].lower().endswith(".pdf")
+            ]
+            pdf_text = ""
+            for pdf_url in pdf_links[:2]:  # max 2 PDFs to keep it fast
+                try:
+                    pdf_resp = await client.get(pdf_url)
+                    pdf_resp.raise_for_status()
+                    with pdfplumber.open(io.BytesIO(pdf_resp.content)) as pdf:
+                        pdf_text += " " + " ".join(page.extract_text() or "" for page in pdf.pages)
+                except Exception:
+                    pass
+            # PDF first — it has the course list; HTML page is appended for context
+            if pdf_text:
+                text = pdf_text + " " + text
 
-        return matched
+        ai = await _extract_with_ai(text)
+        return ai or _match_keywords(text)
+    except Exception:
+        return []
+
+
+
+
+
+async def extract_keywords_from_pdf(data: bytes) -> list[str]:
+    """Extract keywords from raw PDF bytes (for file upload)."""
+    try:
+        return await _extract_from_pdf_bytes(data)
     except Exception:
         return []

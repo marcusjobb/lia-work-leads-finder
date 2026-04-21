@@ -2,6 +2,7 @@
 BACKGROUND.md
 PLAN.md
 Blacklist.md
+pers-brev-example.md
 
 # Claude Code files
 CLAUDE.md
@@ -18,3 +19,6 @@ __pycache__/
 .env.*
 !.env.example
 .worktrees/
+
+# macOS
+.DS_Store

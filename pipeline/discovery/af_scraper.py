@@ -3,6 +3,7 @@ import logging
 import httpx
 
 from models import CompanyRaw
+from pipeline.enrichment.geocoder import geocode
 
 logger = logging.getLogger(__name__)
 
@@ -12,19 +13,28 @@ PAGE_SIZE = 10
 
 
 async def scrape_af(
-    tech_stack: list[str], city: str, all_sweden: bool = False, page: int = 1,
-    page_size: int = PAGE_SIZE,
+    tech_stack: list[str], city: str, all_sweden: bool = False,
+    radius_km: int = 0, limit: int = 100,
 ) -> tuple[list[CompanyRaw], int]:
     """Search Arbetsförmedlingen JobSearch API. Returns (companies, total_hits)."""
     query_parts = tech_stack[:3]
-    if not all_sweden:
-        query_parts = query_parts + [city]
 
-    params = {
+    params: dict = {
         "q": " ".join(query_parts),
-        "offset": (page - 1) * page_size,
-        "limit": page_size,
+        "offset": 0,
+        "limit": min(limit, 100),
     }
+
+    if radius_km > 0:
+        coords = await geocode(city)
+        if coords:
+            params["position"] = f"{coords[0]},{coords[1]}"
+            params["position.radius"] = radius_km
+        else:
+            if not all_sweden:
+                params["q"] += f" {city}"
+    elif not all_sweden:
+        params["q"] += f" {city}"
 
     try:
         async with httpx.AsyncClient(timeout=15) as client:

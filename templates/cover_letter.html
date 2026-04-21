@@ -44,19 +44,42 @@
         </div>
         <div class="cl-actions">
           <a href="/download-letter?company={{ lead.company_name | urlencode }}" class="btn-download">Ladda ner .docx</a>
-          <form method="post" action="/generate-letter" style="display:inline">
+          <form method="post" action="/generate-letter" style="display:inline" class="cl-submit-form">
             <input type="hidden" name="company_name" value="{{ lead.company_name }}">
-            <button type="submit" class="btn-regenerate">Generera nytt</button>
+            <button type="submit" class="btn-regenerate">
+              <svg class="spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                   style="display:none; width:1em; height:1em; vertical-align:middle; margin-right:.3em;">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-dashoffset="10"/>
+              </svg>
+              <span>Generera nytt</span>
+            </button>
           </form>
         </div>
       {% else %}
-        <form method="post" action="/generate-letter" class="cl-generate-form">
+        <form method="post" action="/generate-letter" class="cl-generate-form cl-submit-form">
           <input type="hidden" name="company_name" value="{{ lead.company_name }}">
           <p class="cl-hint">Klicka för att skrapa företaget och generera ett personaliserat brev.</p>
-          <button type="submit" class="btn-generate">Generera ansökningsbrev</button>
+          <button type="submit" class="btn-generate">
+            <svg class="spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                 style="display:none; width:1em; height:1em; vertical-align:middle; margin-right:.3em;">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-dashoffset="10"/>
+            </svg>
+            <span>Generera ansökningsbrev</span>
+          </button>
         </form>
       {% endif %}
     {% endif %}
   </main>
+
+  <script>
+    document.querySelectorAll('.cl-submit-form').forEach(function(form) {
+      form.addEventListener('submit', function() {
+        var btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.querySelector('.spinner').style.display = 'inline-block';
+        btn.querySelector('span').textContent = 'Genererar…';
+      });
+    });
+  </script>
 </body>
 </html>

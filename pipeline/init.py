@@ -11,6 +11,7 @@ def parse_config(form_data: dict) -> SearchConfig:
         tech_stack=tech_stack,
         all_sweden=form_data.get("all_sweden") == "on",
         program_url=form_data.get("program_url") or None,
+        radius_km=int(form_data.get("radius_km", 0)),
         page=int(form_data.get("page", 1)),
         page_size=int(form_data.get("page_size", 10)),
     )

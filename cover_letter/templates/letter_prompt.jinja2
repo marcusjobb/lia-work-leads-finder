@@ -26,3 +26,9 @@ Namn: {{ research.company_name }}
 - Ingen rubrik, börja direkt med hälsningsfras
 
 Skriv bara brevtexten, inget annat.
+{% if example_letter %}
+## Stilreferens
+Här är ett exempel på ett brev skrivet av studenten tidigare. Matcha tonen och strukturen — inte innehållet.
+
+{{ example_letter }}
+{% endif %}

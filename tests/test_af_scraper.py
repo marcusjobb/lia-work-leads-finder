@@ -118,14 +118,14 @@ async def test_returns_total_hits():
             return_value=MagicMock(get=AsyncMock(return_value=mock_response))
         )
         mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
-        results, total = await scrape_af(["Python"], "Göteborg", page=1)
+        results, total = await scrape_af(["Python"], "Göteborg")
 
     assert total == 42
     assert len(results) == 1
 
 
 @pytest.mark.asyncio
-async def test_uses_offset_for_page_2():
+async def test_always_fetches_from_offset_zero():
     mock_response = MagicMock()
     mock_response.json.return_value = {"total": {"value": 42}, "hits": []}
     mock_response.raise_for_status = MagicMock()
@@ -141,6 +141,6 @@ async def test_uses_offset_for_page_2():
             return_value=MagicMock(get=AsyncMock(side_effect=capture_get))
         )
         mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
-        await scrape_af(["Python"], "Göteborg", page=2)
+        await scrape_af(["Python"], "Göteborg")
 
-    assert captured_params.get("offset") == 10  # PAGE_SIZE=10, page 2 → offset=10
+    assert captured_params.get("offset") == 0

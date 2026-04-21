@@ -1,108 +1,68 @@
 import pytest
 from datetime import date
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
-from pipeline.enrichment.stability_scorer import (
-    _age_score,
-    _employee_score,
-    score_stability,
-)
+from pipeline.enrichment.stability_scorer import _age_score, score_stability
+from pipeline.enrichment.company_api import CompanyApiData
 
 TODAY = date.today().year
 
 
 def test_age_score_10_plus():
-    assert _age_score(TODAY - 15) == 100.0
+    assert _age_score(f"{TODAY - 15}-03-01") == 100.0
 
 
 def test_age_score_5_to_9():
-    assert _age_score(TODAY - 7) == 75.0
+    assert _age_score(f"{TODAY - 7}-01-01") == 75.0
 
 
 def test_age_score_2_to_4():
-    assert _age_score(TODAY - 3) == 50.0
+    assert _age_score(f"{TODAY - 3}-06-01") == 50.0
 
 
 def test_age_score_under_2():
-    assert _age_score(TODAY - 1) == 20.0
+    assert _age_score(f"{TODAY - 1}-01-01") == 20.0
 
 
-def test_employee_score_large():
-    assert _employee_score(200) == 100.0
-
-
-def test_employee_score_medium():
-    assert _employee_score(50) == 85.0
-
-
-def test_employee_score_small():
-    assert _employee_score(10) == 60.0
-
-
-def test_employee_score_micro():
-    assert _employee_score(3) == 30.0
-
-
-def test_employee_score_solo():
-    assert _employee_score(1) == 10.0
-
-
-def _mock_client(responses: list):
-    def make_resp(html):
-        r = MagicMock()
-        r.text = html
-        r.raise_for_status = MagicMock()
-        return r
-
-    client = MagicMock()
-    client.get = AsyncMock(side_effect=[make_resp(h) for h in responses])
-    mock_cm = MagicMock()
-    mock_cm.__aenter__ = AsyncMock(return_value=client)
-    mock_cm.__aexit__ = AsyncMock(return_value=False)
-    return mock_cm
+def test_age_score_invalid():
+    assert _age_score(None) == 50.0
+    assert _age_score("bad-date") == 50.0
 
 
 @pytest.mark.asyncio
-async def test_finds_company_age_and_employees():
-    search_html = '<a href="/5566778899/sigma-ab">Sigma AB</a>'
-    company_html = f'<p>Registrerad: {TODAY - 15}</p><p>45 anställda</p>'
-
-    with patch("pipeline.enrichment.stability_scorer.httpx.AsyncClient", return_value=_mock_client([search_html, company_html])):
+async def test_uses_composite_score_when_available():
+    mock_data = CompanyApiData(composite_score=82.0, is_active=True)
+    with patch("pipeline.enrichment.stability_scorer.fetch_company", AsyncMock(return_value=mock_data)):
         score = await score_stability("Sigma AB", "Göteborg")
-
-    assert score == 92.5  # (100.0 + 85.0) / 2
+    assert score == 82.0
 
 
 @pytest.mark.asyncio
-async def test_only_age_available():
-    search_html = '<a href="/1234567890/test-ab">Test AB</a>'
-    company_html = f'<p>Registrerad: {TODAY - 12}</p>'
-
-    with patch("pipeline.enrichment.stability_scorer.httpx.AsyncClient", return_value=_mock_client([search_html, company_html])):
+async def test_falls_back_to_age_score():
+    mock_data = CompanyApiData(registration_date=f"{TODAY - 12}-01-01", is_active=True)
+    with patch("pipeline.enrichment.stability_scorer.fetch_company", AsyncMock(return_value=mock_data)):
         score = await score_stability("Test AB", "Stockholm")
-
     assert score == 100.0
 
 
 @pytest.mark.asyncio
-async def test_no_company_link_returns_neutral():
-    search_html = "<html><body>Inga resultat</body></html>"
+async def test_inactive_company_returns_low_score():
+    mock_data = CompanyApiData(is_active=False, registration_date=f"{TODAY - 10}-01-01")
+    with patch("pipeline.enrichment.stability_scorer.fetch_company", AsyncMock(return_value=mock_data)):
+        score = await score_stability("Stängt AB", "Stockholm")
+    assert score == 10.0
 
-    with patch("pipeline.enrichment.stability_scorer.httpx.AsyncClient", return_value=_mock_client([search_html])):
+
+@pytest.mark.asyncio
+async def test_api_failure_returns_neutral():
+    with patch("pipeline.enrichment.stability_scorer.fetch_company", AsyncMock(side_effect=Exception("timeout"))):
         score = await score_stability("Okänt AB", "Göteborg")
-
     assert score == 50.0
 
 
 @pytest.mark.asyncio
-async def test_network_error_returns_neutral():
-    client = MagicMock()
-    client.get = AsyncMock(side_effect=Exception("timeout"))
-    mock_cm = MagicMock()
-    mock_cm.__aenter__ = AsyncMock(return_value=client)
-    mock_cm.__aexit__ = AsyncMock(return_value=False)
-
-    with patch("pipeline.enrichment.stability_scorer.httpx.AsyncClient", return_value=mock_cm):
-        score = await score_stability("Sigma AB", "Göteborg")
-
+async def test_no_data_returns_neutral():
+    mock_data = CompanyApiData()
+    with patch("pipeline.enrichment.stability_scorer.fetch_company", AsyncMock(return_value=mock_data)):
+        score = await score_stability("Okänt AB", "Göteborg")
     assert score == 50.0

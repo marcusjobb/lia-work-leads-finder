@@ -10,6 +10,13 @@ CONTACT_PATHS = ["/kontakt", "/contact", "/kontakta", "/about/contact"]
 CAREERS_PATHS = ["/karriar", "/karriär", "/career", "/careers", "/jobs", "/lediga-tjanster"]
 
 
+async def find_contact_from_api(api_website: str | None, api_linkedin: str | None) -> tuple[ContactInfo, float] | None:
+    """Build ContactInfo from bolagsapi data without scraping. Returns None if nothing useful."""
+    if not api_website and not api_linkedin:
+        return None
+    return ContactInfo(contact_url=api_website, linkedin_url=api_linkedin), 60.0
+
+
 async def find_contact(website: str | None) -> tuple[ContactInfo, float]:
     """Scrape company website for contact info. Returns (ContactInfo, score 0–100)."""
     if not website:

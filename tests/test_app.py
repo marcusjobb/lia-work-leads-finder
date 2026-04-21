@@ -35,15 +35,15 @@ def test_index_page_loads(client):
 
 
 def test_search_returns_results(client):
-    with patch("app.scrape_indeed", new=AsyncMock(return_value=[])), \
+    profile = _make_profile()
+    with patch("app.scrape_indeed", new=AsyncMock(return_value=[
+             CompanyRaw(name="Sigma AB", city="Göteborg", source="indeed", job_title="Java Developer")
+         ])), \
          patch("app.scrape_af", new=AsyncMock(return_value=([], 0))), \
          patch("app.scrape_companies", new=AsyncMock(return_value=[])), \
-         patch("app.build_profile_async", new=AsyncMock(return_value=_make_profile())):
-        # Trigger build_profile_async by providing one raw company
-        with patch("app.scrape_indeed", new=AsyncMock(return_value=[
-            CompanyRaw(name="Sigma AB", city="Göteborg", source="indeed", job_title="Java Developer")
-        ])):
-            response = client.post("/search", data={"city": "Göteborg", "tech_stack": "Java"})
+         patch("app.build_profile_fast", new=AsyncMock(return_value=profile)), \
+         patch("app.build_profile_async", new=AsyncMock(return_value=profile)):
+        response = client.post("/search", data={"city": "Göteborg", "tech_stack": "Java"})
     assert response.status_code == 200
     assert "Sigma AB" in response.text
 

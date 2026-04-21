@@ -3,10 +3,11 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class SearchConfig(BaseModel):
-    city: str
+    city: str = ""
     tech_stack: list[str]
     all_sweden: bool = False
     program_url: str | None = None
+    radius_km: int = 0
     page: int = 1
     page_size: int = 10
 

@@ -19,6 +19,13 @@
         <span class="score">{{ profile.score | round(0) | int }}p</span>
       </div>
       <p class="match-reason" style="margin-top:.5rem;">{{ profile.match_reason }}</p>
+      {% if enriched %}
+      <p class="profile-saved" style="margin-top:.5rem;">Berikad — stabilitet och kontakt uppdaterade.</p>
+      {% endif %}
+      <form method="post" action="/enrich" style="margin-top:.75rem;">
+        <input type="hidden" name="company_name" value="{{ profile.company_name }}">
+        <button type="submit" class="btn-secondary">Berika manuellt (stabilitet + kontakt)</button>
+      </form>
     </div>
 
     {% if profile.tech_tags %}
