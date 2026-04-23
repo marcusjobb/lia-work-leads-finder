@@ -1,10 +1,31 @@
 import io
+import ipaddress
 import json
 import re
+from urllib.parse import urlparse
+
 import httpx
 import pdfplumber
 from bs4 import BeautifulSoup
 from llm_client import complete
+
+
+def _is_safe_url(url: str) -> bool:
+    """Reject private IPs, loopback, and non-http(s) schemes to prevent SSRF."""
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        host = parsed.hostname or ""
+        if not host:
+            return False
+        try:
+            addr = ipaddress.ip_address(host)
+            return not (addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved)
+        except ValueError:
+            return host.lower() not in ("localhost", "0.0.0.0")
+    except Exception:
+        return False
 
 KNOWN_TECH = [
     # Languages
@@ -80,8 +101,10 @@ async def _extract_from_pdf_bytes(data: bytes) -> list[str]:
 async def scrape_program(url: str) -> list[str]:
     """Fetch a program page (HTML or PDF URL) and extract tech stack keywords.
     For HTML pages, also fetches any linked PDFs to get full course details."""
+    if not _is_safe_url(url):
+        return []
     try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
             response = await client.get(url)
             response.raise_for_status()
             content_type = response.headers.get("content-type", "")
@@ -100,6 +123,8 @@ async def scrape_program(url: str) -> list[str]:
             ]
             pdf_text = ""
             for pdf_url in pdf_links[:2]:  # max 2 PDFs to keep it fast
+                if not _is_safe_url(pdf_url):
+                    continue
                 try:
                     pdf_resp = await client.get(pdf_url)
                     pdf_resp.raise_for_status()
