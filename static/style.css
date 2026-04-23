@@ -37,14 +37,16 @@ button:hover { background: #0052a3; }
 .bar-row { display: flex; align-items: center; gap: .5rem; font-size: .8rem; }
 .rl-label { width: 5rem; flex-shrink: 0; color: #666; white-space: nowrap; }
 .rl-score { width: 2rem; text-align: right; color: #555; }
-.score-table { width: 100%; border-collapse: collapse; font-size: .82rem; table-layout: fixed; }
+.score-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
 .score-table tr { vertical-align: middle; }
 .score-table td { padding: .3rem .4rem; }
-.st-bar { width: 40%; }
+.st-bar { width: 35%; }
 .st-bar .bar { width: 100%; min-width: 0; }
 .st-score { width: 2rem; text-align: right; font-weight: 700; color: #334155; white-space: nowrap; }
-.st-label { white-space: nowrap; color: #555; font-weight: 600; padding-left: .6rem; }
-.st-sub { color: #94a3b8; font-size: .75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 12rem; }
+.st-info { padding-left: .6rem; }
+.st-top { color: #555; font-weight: 600; font-size: .82rem; }
+.st-sub { color: #94a3b8; font-weight: 400; }
+.st-desc { font-size: .72rem; color: #b0bec5; margin-top: .05rem; }
 .weight { font-size: .72rem; color: #94a3b8; font-weight: 400; margin-left: .2rem; }
 .pagination { margin: 1rem 0; display: flex; align-items: center; gap: .5rem; }
 .btn-page { background: white; color: #0066cc; border: 1px solid #0066cc; padding: .4rem .9rem; border-radius: 4px; font-size: .9rem; cursor: pointer; }

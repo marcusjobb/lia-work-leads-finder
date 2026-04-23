@@ -44,26 +44,31 @@ async def fetch_company(company_name: str, city: str) -> CompanyApiData:
     return _parse(foretagsapi_data, bolagsapi_data)
 
 
-_EMP_RANGE_SCORE = {
-    "1-4":    20.0,
-    "5-19":   60.0,
-    "20-49":  85.0,
-    "50-249": 95.0,
-}
-
-
 def _parse_employee_score(size: dict | None) -> float | None:
+    """Parse employee count from bolagsapi size field.
+
+    API returns strings like '10-19 anställda', '0 anställda', '20-49 anställda'.
+    Extract the first number and classify by lower bound.
+    """
     if not size or not isinstance(size, dict):
         return None
-    emp = size.get("employees", "")
-    if not emp:
+    import re
+    emp = str(size.get("employees", ""))
+    m = re.search(r"\d+", emp)
+    if not m:
         return None
-    for prefix, score in _EMP_RANGE_SCORE.items():
-        if emp.startswith(prefix):
-            return score
-    if "250" in emp or "500" in emp or "1000" in emp:
-        return 100.0
-    return None
+    low = int(m.group())
+    if low == 0:
+        return None   # holding/skalbolag, hoppa över
+    if low < 5:
+        return 20.0
+    if low < 20:
+        return 60.0
+    if low < 50:
+        return 85.0
+    if low < 250:
+        return 95.0
+    return 100.0
 
 
 def _parse(fg: dict | None, bg: dict | None) -> CompanyApiData:
