@@ -75,24 +75,40 @@
 
       <section class="detail-card detail-card--full">
         <h2 class="detail-section-title">Poängfördelning</h2>
-        <div class="score-bars">
-          {% set bars = [
-            ("Tech match",  profile.score_breakdown.tech_match,  "30%"),
-            ("Geografisk",  profile.score_breakdown.geo,         "25%"),
-            ("Kontakt",     profile.score_breakdown.contact,     "15%"),
-            ("Aktivitet",   profile.score_breakdown.activity,    "10%"),
-            ("Senioritet",  profile.score_breakdown.seniority,   "15%"),
-            ("Stabilitet",  profile.score_breakdown.stability,    "5%"),
-          ] %}
-          {% for label, val, weight in bars %}
-          <div class="bar-row">
-            <span style="width:7rem;">{{ label }}</span>
-            <div class="bar"><div class="bar-fill" style="width: {{ val }}%"></div></div>
-            <span>{{ val | round(0) | int }}</span>
-            <span class="muted" style="font-size:.75rem; width:2.5rem; text-align:right;">×{{ weight }}</span>
-          </div>
-          {% endfor %}
-        </div>
+        <table class="score-table">
+          <tbody>
+            <tr>
+              <td class="st-bar"><div class="bar"><div class="bar-fill" style="width:{{ profile.score_breakdown.tech_match }}%"></div></div></td>
+              <td class="st-score">{{ profile.score_breakdown.tech_match | round(0) | int }}</td>
+              <td class="st-label">Tech <span class="muted weight">×30%</span></td>
+              <td class="st-sub">{% if profile.tech_tags %}{{ profile.tech_tags | join(", ") }}{% endif %}</td>
+            </tr>
+            <tr>
+              <td class="st-bar"><div class="bar"><div class="bar-fill" style="width:{{ profile.score_breakdown.contact }}%"></div></div></td>
+              <td class="st-score">{{ profile.score_breakdown.contact | round(0) | int }}</td>
+              <td class="st-label">Kontakt <span class="muted weight">×15%</span></td>
+              <td class="st-sub">{% if profile.contact.email %}{{ profile.contact.email }}{% elif profile.contact.contact_url %}Kontaktformulär{% elif profile.contact.careers_page %}Karriärsida{% elif profile.contact.linkedin_url %}LinkedIn{% else %}—{% endif %}</td>
+            </tr>
+            <tr>
+              <td class="st-bar"><div class="bar"><div class="bar-fill" style="width:{{ profile.score_breakdown.seniority }}%"></div></div></td>
+              <td class="st-score">{{ profile.score_breakdown.seniority | round(0) | int }}</td>
+              <td class="st-label">Senioritet <span class="muted weight">×15%</span></td>
+              <td class="st-sub">{% if profile.job_title %}{{ profile.job_title }}{% else %}—{% endif %}</td>
+            </tr>
+            <tr>
+              <td class="st-bar"><div class="bar"><div class="bar-fill" style="width:{{ profile.score_breakdown.activity }}%"></div></div></td>
+              <td class="st-score">{{ profile.score_breakdown.activity | round(0) | int }}</td>
+              <td class="st-label">Aktivitet <span class="muted weight">×10%</span></td>
+              <td class="st-sub">{% if profile.publication_date %}{{ profile.publication_date[:10] }}{% else %}—{% endif %}</td>
+            </tr>
+            <tr>
+              <td class="st-bar"><div class="bar"><div class="bar-fill" style="width:{{ profile.score_breakdown.stability }}%"></div></div></td>
+              <td class="st-score">{{ profile.score_breakdown.stability | round(0) | int }}</td>
+              <td class="st-label">Stabilitet <span class="muted weight">×5%</span></td>
+              <td class="st-sub">{% if profile.is_active is none %}—{% elif not profile.is_active %}Avregistrerat{% else %}{% if profile.registration_date %}{{ profile.registration_date[:4] }}{% endif %}{% if profile.employee_range %} · {{ profile.employee_range }}{% endif %}{% if not profile.registration_date and not profile.employee_range %}Aktiv{% endif %}{% endif %}</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
 
     </div>

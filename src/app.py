@@ -1,5 +1,7 @@
 import asyncio
 import json
+import logging
+import logging.config
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -9,14 +11,14 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from cover_letter.models import StudentProfile
+from cover_letter.models import CompanyResearch, StudentProfile
 from cover_letter.pipeline.research_agent import research_company
 from cover_letter.pipeline.validators.language_validator import validate_language
 from cover_letter.pipeline.validators.tone_validator import validate_tone
-from cover_letter.pipeline.writer_agent import generate_letter
+from cover_letter.pipeline.writer_agent import fix_letter, generate_letter
 from export.docx_exporter import export_letter
 from export.xlsx_exporter import export_leads
-from models import LeadProfile
+from models import CompanyRaw, LeadProfile, SearchConfig
 from pipeline.init import parse_config
 from pipeline.discovery.indeed import scrape_indeed
 from pipeline.discovery.af_scraper import scrape_af, PAGE_SIZE
@@ -28,13 +30,21 @@ from pipeline.validators.relevance import is_relevant
 from pipeline.validators.completeness import is_complete
 from pipeline.validators.contact import is_reachable
 
-app = FastAPI(title="LIA Leads Finder")
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s %(name)s — %(message)s",
+)
 
-_CACHE_DIR = Path("cache")
+_ROOT = Path(__file__).parent.parent
+
+app = FastAPI(title="LIA Leads Finder")
+app.mount("/static", StaticFiles(directory=str(_ROOT / "static")), name="static")
+templates = Jinja2Templates(directory=str(_ROOT / "templates"))
+
+_CACHE_DIR = _ROOT / "cache"
 _RESULTS_CACHE = _CACHE_DIR / "last_results.json"
 _LETTERS_CACHE = _CACHE_DIR / "letters"
+_TOP_N = 30  # full enrichment (stability API + contact) for top N candidates only
 
 
 def _save_profiles(profiles: list[LeadProfile]) -> None:
@@ -83,6 +93,18 @@ def _load_letter(company_name: str) -> str | None:
     safe = company_name.replace("/", "_").replace(" ", "_")
     path = _LETTERS_CACHE / f"{safe}.txt"
     return path.read_text() if path.exists() else None
+
+
+def _save_research(company_name: str, research: CompanyResearch) -> None:
+    _LETTERS_CACHE.mkdir(parents=True, exist_ok=True)
+    safe = company_name.replace("/", "_").replace(" ", "_")
+    (_LETTERS_CACHE / f"{safe}_research.json").write_text(research.model_dump_json())
+
+
+def _load_research(company_name: str) -> CompanyResearch | None:
+    safe = company_name.replace("/", "_").replace(" ", "_")
+    path = _LETTERS_CACHE / f"{safe}_research.json"
+    return CompanyResearch.model_validate_json(path.read_text()) if path.exists() else None
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -136,6 +158,7 @@ async def profile_save(request: Request):
     languages = [l.strip() for l in form.get("languages", "").split(",") if l.strip()]
     portfolio_url = form.get("portfolio_url", "").strip() or None
     program_url = form.get("program_url", "").strip() or None
+    lia_period = form.get("lia_period", "").strip() or None
 
     data = {
         "name": form.get("name", "").strip(),
@@ -146,6 +169,7 @@ async def profile_save(request: Request):
         "portfolio_url": portfolio_url,
         "program_url": program_url,
         "bio": form.get("bio", "").strip(),
+        "lia_period": lia_period,
     }
     Path("student_profile.yaml").write_text(yaml.dump(data, allow_unicode=True, sort_keys=False))
 
@@ -173,7 +197,6 @@ async def search(request: Request):
     center_coords = await geocode(config.city) if config.radius_km > 0 else None
 
     # Pass 1 — fast scoring without API calls, used to rank all candidates
-    _TOP_N = 30
     fast_profiles = list(await asyncio.gather(*[build_profile_fast(c, config, center_coords) for c in raw_companies]))
     fast_profiles = [p for p in fast_profiles if is_relevant(p) and is_complete(p) and is_reachable(p)]
     fast_profiles.sort(key=lambda p: p.score, reverse=True)
@@ -186,6 +209,9 @@ async def search(request: Request):
     enriched_names = {p.company_name for p in enriched}
     rest = [p for p in fast_profiles[_TOP_N:] if p.company_name not in enriched_names]
     all_profiles = sorted(enriched + rest, key=lambda p: p.score, reverse=True)
+
+    seen: set[str] = set()
+    all_profiles = [p for p in all_profiles if not (p.company_name in seen or seen.add(p.company_name))]  # type: ignore[func-returns-value]
 
     _save_profiles(all_profiles)
 
@@ -286,15 +312,53 @@ async def generate_letter_route(request: Request):
         research = await research_company(lead)
         letter = await generate_letter(student, research)
         _save_letter(company_name, letter)
+        _save_research(company_name, research)
 
-        tone = validate_tone(letter)
-        lang = validate_language(letter, research.detected_language)
+        tone = await validate_tone(letter, research)
+        lang = await validate_language(letter, research.detected_language)
         warnings = tone.issues + ([] if lang.ok else [f"Språk: förväntat {lang.expected}, fick {lang.detected}"])
     except Exception as e:
         return templates.TemplateResponse(
             request,
             "cover_letter.html",
             {"lead": lead, "student": student, "letter": None, "error": str(e)},
+        )
+
+    return templates.TemplateResponse(
+        request,
+        "cover_letter.html",
+        {"lead": lead, "student": student, "letter": letter, "warnings": warnings, "error": None},
+    )
+
+
+@app.post("/fix-letter", response_class=HTMLResponse)
+async def fix_letter_route(request: Request):
+    form = await request.form()
+    company_name = form.get("company_name", "")
+    current_letter = form.get("current_letter", "")
+    lead = _find_profile(company_name)
+    student = _load_student()
+    research = _load_research(company_name)
+
+    if not lead or not research:
+        return RedirectResponse("/generate-letter", status_code=303)
+
+    try:
+        tone_before = await validate_tone(current_letter, research)
+        lang_before = await validate_language(current_letter, research.detected_language)
+        warnings_before = tone_before.issues + ([] if lang_before.ok else [f"Språk: förväntat {lang_before.expected}, fick {lang_before.detected}"])
+
+        letter = await fix_letter(current_letter, warnings_before, research, student)
+        _save_letter(company_name, letter)
+
+        tone = await validate_tone(letter, research)
+        lang = await validate_language(letter, research.detected_language)
+        warnings = tone.issues + ([] if lang.ok else [f"Språk: förväntat {lang.expected}, fick {lang.detected}"])
+    except Exception as e:
+        return templates.TemplateResponse(
+            request,
+            "cover_letter.html",
+            {"lead": lead, "student": student, "letter": current_letter, "error": str(e)},
         )
 
     return templates.TemplateResponse(

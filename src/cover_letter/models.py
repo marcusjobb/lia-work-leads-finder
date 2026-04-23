@@ -10,6 +10,7 @@ class StudentProfile(BaseModel):
     portfolio_url: str | None = None
     program_url: str | None = None
     bio: str
+    lia_period: str | None = None  # t.ex. "mars–maj 2026" eller "hösten 2026"
 
 
 class CompanyResearch(BaseModel):

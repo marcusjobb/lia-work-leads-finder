@@ -20,4 +20,21 @@ async def generate_letter(student: StudentProfile, research: CompanyResearch) ->
     template = _env.get_template("letter_prompt.jinja2")
     prompt = template.render(student=student, research=research, example_letter=_load_example_letter())
     raw = await llm_client.complete(prompt)
-    return postprocess(raw, student)
+    return await postprocess(raw, student)
+
+
+async def fix_letter(letter: str, warnings: list[str], research: CompanyResearch, student: StudentProfile) -> str:
+    issues = "\n".join(f"- {w}" for w in warnings)
+    company_ctx = research.about_text[:200] if research.about_text else ""
+    values_ctx = ", ".join(research.values) if research.values else ""
+    prompt = (
+        f"Förbättra detta ansökningsbrev genom att åtgärda följande specifika problem:\n{issues}\n\n"
+        f"Regler:\n"
+        f"- Ändra BARA det som adresserar problemen ovan\n"
+        f"- Behåll brevets struktur, längd och övriga formuleringar\n"
+        f"- Räkna INTE fraser som klichéer om de beskriver företaget: {company_ctx}\n"
+        + (f"- Företagets värderingar (ignorera dessa): {values_ctx}\n" if values_ctx else "")
+        + f"\nBrev:\n{letter}"
+    )
+    raw = await llm_client.complete(prompt)
+    return await postprocess(raw, student)

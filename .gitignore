@@ -1,8 +1,14 @@
 # Planning & internal docs
 BACKGROUND.md
 PLAN.md
+PHASE2.md
+presentation.md
 Blacklist.md
 pers-brev-example.md
+temp.md
+
+# User data
+student_profile.yaml
 
 # Claude Code files
 CLAUDE.md
@@ -19,6 +25,12 @@ __pycache__/
 .env.*
 !.env.example
 .worktrees/
+
+# Lock file artifacts
+uv-*.lock
+
+# Runtime cache
+cache/
 
 # macOS
 .DS_Store

@@ -1,23 +1,21 @@
 from models import ScoreBreakdown
 
 WEIGHTS = {
-    "tech_match": 0.30,
-    "geo": 0.25,
-    "contact": 0.15,
-    "activity": 0.10,
-    "stability": 0.05,
-    "seniority": 0.15,
+    "tech_match": 0.35,
+    "seniority": 0.20,
+    "contact": 0.20,
+    "activity": 0.15,
+    "stability": 0.10,
 }
 
 
 def compute_score(breakdown: ScoreBreakdown) -> float:
     return round(
         breakdown.tech_match * WEIGHTS["tech_match"]
-        + breakdown.geo * WEIGHTS["geo"]
+        + breakdown.seniority * WEIGHTS["seniority"]
         + breakdown.contact * WEIGHTS["contact"]
         + breakdown.activity * WEIGHTS["activity"]
-        + breakdown.stability * WEIGHTS["stability"]
-        + breakdown.seniority * WEIGHTS["seniority"],
+        + breakdown.stability * WEIGHTS["stability"],
         2,
     )
 

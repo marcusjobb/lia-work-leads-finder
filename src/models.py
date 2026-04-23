@@ -54,9 +54,14 @@ class LeadProfile(BaseModel):
     source: str = "unknown"
     job_title: str | None = None
     job_url: str | None = None
+    publication_date: str | None = None
     tech_tags: list[str]
     contact: ContactInfo
     score: float = Field(ge=0.0, le=100.0)
     score_breakdown: ScoreBreakdown
     match_reason: str
     tier: Literal["STRONG", "GOOD", "WEAK", "SKIP"]
+    # Stability context (populated after API enrichment)
+    registration_date: str | None = None
+    employee_range: str | None = None
+    is_active: bool | None = None

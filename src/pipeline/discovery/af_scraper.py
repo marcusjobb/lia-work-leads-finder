@@ -55,6 +55,7 @@ async def scrape_af(
             name = employer.get("name", "").strip()
             if not name:
                 continue
+            desc = (hit.get("description") or {}).get("text", "") or ""
             companies.append(
                 CompanyRaw(
                     name=name,
@@ -64,6 +65,7 @@ async def scrape_af(
                     job_title=hit.get("headline"),
                     job_url=hit.get("webpage_url"),
                     publication_date=hit.get("publication_date"),
+                    description=desc or None,
                 )
             )
         return companies, total

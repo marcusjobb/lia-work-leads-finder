@@ -1,6 +1,6 @@
 from models import ContactInfo, LeadProfile, ScoreBreakdown
 from pipeline.validators.relevance import is_relevant
-from quality_gate import compute_score, assign_tier
+from pipeline.quality_gate import compute_score, assign_tier
 
 
 def _make_profile(tech_score: float) -> LeadProfile:

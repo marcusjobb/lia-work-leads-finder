@@ -1,13 +1,7 @@
+import json
 import re
 
-_SWEDISH = re.compile(
-    r"\b(och|att|det|är|för|med|som|på|en|ett|av|till|den|de|vi|inte|har|om)\b",
-    re.IGNORECASE,
-)
-_ENGLISH = re.compile(
-    r"\b(the|and|is|for|with|that|on|an|of|to|we|not|have|about|but|will|can)\b",
-    re.IGNORECASE,
-)
+import llm_client
 
 
 class LanguageValidationResult:
@@ -17,12 +11,34 @@ class LanguageValidationResult:
         self.expected = expected
 
 
-def validate_language(letter: str, expected_language: str) -> LanguageValidationResult:
-    sv = len(_SWEDISH.findall(letter))
-    en = len(_ENGLISH.findall(letter))
-    detected = "svenska" if sv >= en else "engelska"
+async def validate_language(letter: str, expected_language: str) -> LanguageValidationResult:
+    prompt = (
+        f'Du är en språkdetektor. Svara BARA med ett JSON-objekt utan markdown.\n'
+        f'Format: {{"detected": "svenska" eller "engelska", "ok": true eller false}}\n'
+        f'Förväntat språk: {expected_language}\n\n'
+        f'Text att analysera:\n{letter[:500]}'
+    )
+    raw = await llm_client.complete(prompt)
+    data = _parse_json(raw)
+    detected = data.get("detected", "svenska")
     return LanguageValidationResult(
-        ok=(detected == expected_language),
+        ok=bool(data.get("ok", detected == expected_language)),
         detected=detected,
         expected=expected_language,
     )
+
+
+def _parse_json(text: str) -> dict:
+    # strip markdown code fences if present
+    text = re.sub(r"```[a-z]*\n?", "", text).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # best-effort: extract first {...} block
+        m = re.search(r"\{.*?\}", text, re.DOTALL)
+        if m:
+            try:
+                return json.loads(m.group())
+            except json.JSONDecodeError:
+                pass
+    return {}

@@ -9,6 +9,7 @@ Tech stack: {{ student.tech_stack | join(", ") }}
 Erfarenhet: {{ student.experience }}
 Bio: {{ student.bio }}
 {% if student.portfolio_url %}Portfolio: {{ student.portfolio_url }}{% endif %}
+{% if student.lia_period %}LIA-period: {{ student.lia_period }}{% endif %}
 
 ## Företaget
 Namn: {{ research.company_name }}
@@ -19,11 +20,26 @@ Namn: {{ research.company_name }}
 ## Krav på brevet
 - Längd: 3–4 stycken, max 300 ord
 - Ton: professionell men varm och personlig — inte robotig
-- Nämn specifikt varför just detta företag passar studenten
-- Koppla studentens tech stack till företagets verksamhet
-- Avsluta med konkret önskan om intervju
-- Inga klichéer som "passionerad", "driven", "excited to" eller "I am writing to apply"
 - Ingen rubrik, börja direkt med hälsningsfras
+- Avsluta med konkret önskan om intervju. Nämn INTE ett specifikt datum för LIA-perioden om det inte finns i studentens profil — skriv "under hösten" eller liknande om inget datum är känt
+- Använd max 4-5 gånger ordet "jag" i hela brevet. Börja meningar med ämnet istället: "Erfarenheten som X...", "Studierna har gett...", "En LIA-plats hos er..."
+
+## Koppling student–företag
+- Koppla studentens tech stack till företagets faktiska verksamhet, inte till generiska påståenden
+- Om portfolio_url finns: nämn ett specifikt projekt eller konkret resultat som är synligt där — INTE vaga fraser som "visar mitt intresse för att utforska", "implementera tekniska lösningar", "se mina projekt". Skriv t.ex. "I mitt repo finns ett REST-API i Spring Boot" eller liknande konkret beskrivning.
+- Tredje stycket ska tillföra studentens perspektiv — inte bara spegla tillbaka företagets egna ord
+
+## Förbjudna fraser och mönster
+- Inga em-streck (–). Använd komma eller punkt istället.
+- Inga klichéer: "passionerad", "driven", "excited to", "I am writing to apply", "lösa komplexa utmaningar", "kreativitet och innovation", "förstår helheten", "bidra till X framåt", "kommunicera lösningar till olika målgrupper", "komplexa tekniska problem", "lika delar människor och innovation", "spännande projekt"
+- Avsluta INTE med "ser fram emot att höra från er", "bidra till X framgång", "diskutera hur jag kan bidra", "presentera min profil närmare i en intervju", "förhoppningsvis bidra till" eller liknande. Avsluta med en konkret mening: vad studenten vill lära sig eller bygga under LIA-perioden.
+- Inled INTE sista stycket med "Tack för att ni läser" eller "Jag ber er återkomma om"
+- Skriv INTE "om mina kunskaper kan vara relevanta" — det signalerar osäkerhet. Studenten söker aktivt, inte villkorligt.
+- Nämn INTE företagsnamnet mer än 1 gång efter hälsningsfrasen
+- Kopiera INTE fraser rakt av från bolagsbeskrivningen tillbaka till brevet
+- Använd ALLTID "jag" — aldrig "vi" — när du beskriver studentens erfarenheter och studier
+- Upprepa INTE samma ord två gånger i samma mening
+- Undvik meningar kortare än 8 ord — kombinera dem med närmaste mening
 
 Skriv bara brevtexten, inget annat.
 {% if example_letter %}

@@ -82,7 +82,6 @@
             <span class="city">{{ p.city }}</span>
             <span class="source-badge source-badge--{{ p.source }}">{{ p.source | upper }}</span>
             <span class="score">{{ p.score | round(0) | int }}p</span>
-            <a href="/lead?name={{ p.company_name | urlencode }}" class="detail-link">Detaljer</a>
           </div>
           <div class="card-body">
             {% if p.job_title %}
@@ -103,7 +102,6 @@
             <div class="score-bars">
               {% set bars = [
                 ("Tech",       p.score_breakdown.tech_match, "Hur väl företagets tech stack matchar din. Vikt: 30%."),
-                ("Geo",        p.score_breakdown.geo,        "Geografisk närhetspoäng baserat på stad. Vikt: 25%."),
                 ("Kontakt",    p.score_breakdown.contact,    "Om kontaktinfo finns (e-post, LinkedIn, karriärsida). Vikt: 15%."),
                 ("Aktivitet",  p.score_breakdown.activity,   "Tecken på aktiv rekrytering (jobbannonser, nyheter). Vikt: 10%."),
                 ("Senioritet", p.score_breakdown.seniority,  "Söker företaget juniora roller? Högre = mer juniorvänligt. Vikt: 15%."),
@@ -111,14 +109,15 @@
               ] %}
               {% for label, val, tip in bars %}
               <div class="bar-row">
-                <span class="bar-label metric-tip" data-tip="{{ tip }}">{{ label }}</span>
+                <span class="rl-label metric-tip" data-tip="{{ tip }}">{{ label }}</span>
                 <div class="bar"><div class="bar-fill" style="width: {{ val }}%"></div></div>
-                <span>{{ val | round(0) | int }}</span>
+                <span class="rl-score">{{ val | round(0) | int }}</span>
               </div>
               {% endfor %}
             </div>
             <div class="card-actions">
               <a href="/cover-letter?company={{ p.company_name | urlencode }}" class="btn-letter">Skriv ansökningsbrev</a>
+              <a href="/lead?name={{ p.company_name | urlencode }}" class="btn-details">Detaljer →</a>
             </div>
           </div>
         </li>

@@ -7,6 +7,8 @@ from httpx import Response
 from cover_letter.pipeline.research_agent import _detect_language, research_company
 from models import CompanyRaw, ContactInfo, LeadProfile, ScoreBreakdown
 
+_LLM_RESPONSE = '{"about_text": "Techbolaget bygger mjukvara.", "values": ["Innovation"], "recent_news": []}'
+
 
 def _make_lead(website: str | None = "https://example.com") -> LeadProfile:
     return LeadProfile(
@@ -40,7 +42,8 @@ async def test_research_company_parses_html():
 
     lead = _make_lead()
 
-    with patch("cover_letter.pipeline.research_agent.httpx.AsyncClient") as mock_client_cls:
+    with patch("cover_letter.pipeline.research_agent.httpx.AsyncClient") as mock_client_cls, \
+         patch("llm_client.complete", new=AsyncMock(return_value=_LLM_RESPONSE)):
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)

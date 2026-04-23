@@ -1,8 +1,21 @@
+import pytest
+from unittest.mock import AsyncMock, patch
+
 from models import ContactInfo, LeadProfile, ScoreBreakdown
 from pipeline.validators.completeness import is_complete
 from pipeline.validators.contact import is_reachable
+from cover_letter.models import CompanyResearch
 from cover_letter.pipeline.validators.language_validator import validate_language
 from cover_letter.pipeline.validators.tone_validator import validate_tone
+
+
+def _research(**kwargs) -> CompanyResearch:
+    defaults = dict(
+        company_name="Test AB", website=None,
+        about_text="", values=[], recent_news=[], detected_language="svenska",
+    )
+    defaults.update(kwargs)
+    return CompanyResearch(**defaults)
 
 
 def _profile(**kwargs) -> LeadProfile:
@@ -51,33 +64,62 @@ def test_not_reachable_no_contact():
     assert is_reachable(_profile()) is False
 
 
-# --- Phase 2: tone + language validators ---
+# --- Phase 2: tone + language validators (LLM-agenter) ---
 
-def test_tone_clean_letter():
-    letter = "Jag söker LIA-plats hos er eftersom ert arbete med molntjänster är intressant."
-    assert validate_tone(letter).ok
+@pytest.mark.asyncio
+async def test_tone_clean_letter():
+    with patch("llm_client.complete", new=AsyncMock(return_value='{"ok": true, "issues": []}')):
+        result = await validate_tone("Jag söker LIA-plats hos er eftersom ert arbete med molntjänster är intressant.", _research())
+    assert result.ok
 
 
-def test_tone_detects_cliché_passionerad():
-    result = validate_tone("Jag är passionerad av Java och vill gärna jobba hos er.")
+@pytest.mark.asyncio
+async def test_tone_detects_cliché_passionerad():
+    response = '{"ok": false, "issues": ["Undvik kliché: \\"passionerad\\""]}'
+    with patch("llm_client.complete", new=AsyncMock(return_value=response)):
+        result = await validate_tone("Jag är passionerad av Java och vill gärna jobba hos er.", _research())
     assert not result.ok
     assert any("passionerad" in issue for issue in result.issues)
 
 
-def test_tone_detects_excited_to():
-    assert not validate_tone("I am excited to apply for this position.").ok
+@pytest.mark.asyncio
+async def test_tone_detects_excited_to():
+    response = '{"ok": false, "issues": ["Undvik kliché: \\"excited to\\""]}'
+    with patch("llm_client.complete", new=AsyncMock(return_value=response)):
+        result = await validate_tone("I am excited to apply for this position.", _research())
+    assert not result.ok
 
 
-def test_language_swedish_matches():
-    result = validate_language("Jag vill söka praktikplats hos er och bidra med mitt kunnande inom Java.", "svenska")
+@pytest.mark.asyncio
+async def test_tone_ignores_company_language():
+    research = _research(
+        about_text="Vi har platt organisation och korta beslutsvägar.",
+        values=["kreativitet och innovation"],
+    )
+    with patch("llm_client.complete", new=AsyncMock(return_value='{"ok": true, "issues": []}')):
+        result = await validate_tone(
+            "Ert arbete med platt organisation och korta beslutsvägar tilltalar mig.",
+            research,
+        )
+    assert result.ok
+
+
+@pytest.mark.asyncio
+async def test_language_swedish_matches():
+    with patch("llm_client.complete", new=AsyncMock(return_value='{"detected": "svenska", "ok": true}')):
+        result = await validate_language("Jag vill söka praktikplats hos er och bidra med mitt kunnande inom Java.", "svenska")
     assert result.ok and result.detected == "svenska"
 
 
-def test_language_english_matches():
-    result = validate_language("I would like to apply for an internship and contribute with my knowledge of Java.", "engelska")
+@pytest.mark.asyncio
+async def test_language_english_matches():
+    with patch("llm_client.complete", new=AsyncMock(return_value='{"detected": "engelska", "ok": true}')):
+        result = await validate_language("I would like to apply for an internship and contribute with my knowledge of Java.", "engelska")
     assert result.ok and result.detected == "engelska"
 
 
-def test_language_mismatch():
-    result = validate_language("Jag vill söka praktikplats hos er och bidra med mitt kunnande.", "engelska")
+@pytest.mark.asyncio
+async def test_language_mismatch():
+    with patch("llm_client.complete", new=AsyncMock(return_value='{"detected": "svenska", "ok": false}')):
+        result = await validate_language("Jag vill söka praktikplats hos er och bidra med mitt kunnande.", "engelska")
     assert not result.ok

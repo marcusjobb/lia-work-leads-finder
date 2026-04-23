@@ -33,9 +33,13 @@
       {% endif %}
 
       {% if warnings %}
-        <ul class="cl-warnings">
-          {% for w in warnings %}<li>{{ w }}</li>{% endfor %}
-        </ul>
+        <div class="cl-warnings">
+          <p class="cl-warnings__heading">⚠ Tonfeedback från AI-granskning</p>
+          <p class="cl-warnings__desc">Nedanstående fraser kan låta klichéartade eller svaga. Redigera brevet direkt i textrutan, eller klicka "Generera nytt" för ett nytt försök.</p>
+          <ul>
+            {% for w in warnings %}<li>{{ w }}</li>{% endfor %}
+          </ul>
+        </div>
       {% endif %}
 
       {% if letter %}
@@ -44,16 +48,19 @@
         </div>
         <div class="cl-actions">
           <a href="/download-letter?company={{ lead.company_name | urlencode }}" class="btn-download">Ladda ner .docx</a>
-          <form method="post" action="/generate-letter" style="display:inline" class="cl-submit-form">
+          {% if warnings %}
+          <form method="post" action="/fix-letter" style="display:inline" class="cl-submit-form">
             <input type="hidden" name="company_name" value="{{ lead.company_name }}">
+            <textarea name="current_letter" style="display:none">{{ letter }}</textarea>
             <button type="submit" class="btn-regenerate">
               <svg class="spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                    style="display:none; width:1em; height:1em; vertical-align:middle; margin-right:.3em;">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-dashoffset="10"/>
               </svg>
-              <span>Generera nytt</span>
+              <span>Fixa brevet</span>
             </button>
           </form>
+          {% endif %}
         </div>
       {% else %}
         <form method="post" action="/generate-letter" class="cl-generate-form cl-submit-form">

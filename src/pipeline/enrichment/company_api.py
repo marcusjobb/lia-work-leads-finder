@@ -1,10 +1,10 @@
 """Fetches company data from foretagsapi.se and bolagsapi.se with SQLite caching."""
 import logging
-import os
 from dataclasses import dataclass
 
 import httpx
 
+from config import FORETAGSAPI_KEY, BOLAGSAPI_KEY
 from pipeline.enrichment.company_cache import get, put
 
 logger = logging.getLogger(__name__)
@@ -92,10 +92,9 @@ def _parse(fg: dict | None, bg: dict | None) -> CompanyApiData:
 
 
 async def _fetch_foretagsapi(company_name: str, city: str) -> dict | None:
-    key = os.getenv("FORETAGSAPI_KEY", "")
     headers = {"Content-Type": "application/json"}
-    if key:
-        headers["Authorization"] = f"Bearer {key}"
+    if FORETAGSAPI_KEY:
+        headers["Authorization"] = f"Bearer {FORETAGSAPI_KEY}"
 
     payload = {"q": f"{company_name} {city}", "limit": 3}
     try:
@@ -118,14 +117,14 @@ async def _fetch_foretagsapi(company_name: str, city: str) -> dict | None:
 
 
 async def _fetch_bolagsapi(org_number: str) -> dict | None:
-    key = os.getenv("BOLAGSAPI_KEY", "")
-    if not key:
+    if not BOLAGSAPI_KEY:
+        logger.info("BOLAGSAPI_KEY saknas — employee_range förblir null")
         return None
     try:
         async with httpx.AsyncClient(timeout=8) as client:
             resp = await client.get(
                 f"{_BOLAGSAPI_URL}/{org_number}",
-                headers={"Authorization": f"Bearer {key}"},
+                headers={"Authorization": f"Bearer {BOLAGSAPI_KEY}"},
             )
             resp.raise_for_status()
             return resp.json()

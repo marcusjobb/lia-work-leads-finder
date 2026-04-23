@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 CONTACT_PATHS = ["/kontakt", "/contact", "/kontakta", "/about/contact"]
 CAREERS_PATHS = ["/karriar", "/karriär", "/career", "/careers", "/jobs", "/lediga-tjanster"]
+_BLOCKED_PATHS = ["/cookie", "/privacy", "/terms", "/gdpr", "/integritet"]
 
 
 async def find_contact_from_api(api_website: str | None, api_linkedin: str | None) -> tuple[ContactInfo, float] | None:
@@ -44,7 +45,8 @@ async def find_contact(website: str | None) -> tuple[ContactInfo, float]:
     )
     careers_page = next(
         (tag["href"] for tag in soup.find_all("a", href=True)
-         if any(p in tag["href"].lower() for p in CAREERS_PATHS)),
+         if any(p in tag["href"].lower() for p in CAREERS_PATHS)
+         and not any(b in tag["href"].lower() for b in _BLOCKED_PATHS)),
         None,
     )
     if contact_url or careers_page:

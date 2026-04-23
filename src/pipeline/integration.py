@@ -6,9 +6,9 @@ from pipeline.enrichment.seniority_scorer import score_seniority
 from pipeline.enrichment.contact_finder import find_contact, find_contact_from_api
 from pipeline.enrichment.stability_scorer import score_stability
 from pipeline.enrichment.company_api import fetch_company
-from quality_gate import assign_tier, compute_score
+from pipeline.quality_gate import assign_tier, compute_score
 
-_STABILITY_SCORE_DEFAULT = 50.0
+_STABILITY_SCORE_DEFAULT = 0.0
 
 
 def _assemble(
@@ -18,6 +18,10 @@ def _assemble(
     contact_score: float,
     stability: float = _STABILITY_SCORE_DEFAULT,
     geo_score: float | None = None,
+    registration_date: str | None = None,
+    employee_range: str | None = None,
+    is_active: bool | None = None,
+    org_number: str | None = None,
 ) -> LeadProfile:
     analysis_text = " ".join(filter(None, [company.job_title, company.description]))
     tech_score = analyze_tech(config.tech_stack, analysis_text)
@@ -42,17 +46,22 @@ def _assemble(
         reason_parts.append("Hela Sverige")
     return LeadProfile(
         company_name=company.name,
+        org_number=org_number,
         website=company.website,
         city=company.city,
         source=company.source,
         job_title=company.job_title,
         job_url=company.job_url,
+        publication_date=company.publication_date,
         tech_tags=[t.lower() for t in config.tech_stack if t.lower() in analysis_text.lower()],
         contact=contact_info,
         score=score,
         score_breakdown=breakdown,
         match_reason=", ".join(reason_parts) or "Generell matchning",
         tier=tier,
+        registration_date=registration_date,
+        employee_range=employee_range,
+        is_active=is_active,
     )
 
 
@@ -96,4 +105,16 @@ async def build_profile_async(
         website = api_data.website or company.website
         contact_info, contact_score = await find_contact(website)
 
-    return _assemble(company, config, contact_info, contact_score, stability, geo_score)
+    return _assemble(
+        company, config, contact_info, contact_score, stability, geo_score,
+        registration_date=api_data.registration_date,
+        employee_range=_employee_range(api_data.employee_score),
+        is_active=api_data.is_active,
+        org_number=api_data.org_number,
+    )
+
+
+def _employee_range(score: float | None) -> str | None:
+    if score is None:
+        return None
+    return {20.0: "1–4", 60.0: "5–19", 85.0: "20–49", 95.0: "50–249"}.get(score, "250+")

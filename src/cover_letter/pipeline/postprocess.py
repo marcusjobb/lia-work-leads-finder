@@ -1,37 +1,53 @@
+import logging
 import re
-
+import llm_client
 from cover_letter.models import StudentProfile
+from cover_letter.pipeline.humanizer import humanize
 
-_PHONE = re.compile(r"\b(?:\+46|0)\d[\d\s\-–]{6,}\d\b")
-_EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.\w{2,}\b")
-_URL = re.compile(r"https?://\S+|www\.\S+")
-
-
-def postprocess(letter: str, student: StudentProfile) -> str:
-    lines = letter.splitlines()
-    cleaned = [_clean_line(line, student) for line in lines]
-    # strip trailing blank lines introduced by removals
-    while cleaned and not cleaned[-1].strip():
-        cleaned.pop()
-    return "\n".join(cleaned)
+logger = logging.getLogger(__name__)
 
 
-def _clean_line(line: str, student: StudentProfile) -> str:
-    # remove phone numbers unconditionally (not in StudentProfile)
-    line = _PHONE.sub("", line)
+def _strip_stray_unicode(text: str) -> str:
+    """Remove non-Latin/Swedish characters that don't belong in Swedish prose."""
+    return re.sub(r"[^\x00-\x7F\u00C0-\u024F\u2019\u2018\u201C\u201D\n ]", "", text)
 
-    # remove emails unconditionally (not in StudentProfile)
-    line = _EMAIL.sub("", line)
 
-    # remove URLs unless they match the student's portfolio
-    def _keep_url(m: re.Match) -> str:
-        url = m.group()
-        if student.portfolio_url and student.portfolio_url.rstrip("/") in url.rstrip("/"):
-            return url
-        return ""
+_BANNED = [
+    r"ser fram emot att (?:höra|diskutera)",
+    r"bidra till \w+s? framgång",
+    r"driver digital utveckling framåt",
+    r"ber er återkomma om mina kunskaper",
+    r"lika delar människor och innovation",
+    r"komplexa tekniska problem",
+    r"presentera min profil närmare",
+    r"förhoppningsvis bidra till",
+    r"spännande projekt",
+    r"visa mitt intresse för att (?:utforska|implementera)",
+]
 
-    line = _URL.sub(_keep_url, line)
+def _flag_banned(text: str) -> list[str]:
+    """Return list of banned phrases found — for logging/warnings."""
+    found = []
+    for pattern in _BANNED:
+        if re.search(pattern, text, re.IGNORECASE):
+            found.append(pattern)
+    return found
 
-    # collapse multiple spaces and strip trailing whitespace
-    line = re.sub(r"  +", " ", line).rstrip()
-    return line
+
+async def postprocess(letter: str, student: StudentProfile) -> str:
+    portfolio = student.portfolio_url or "inga"
+    prompt = (
+        f'Städa detta ansökningsbrev:\n'
+        f'- Ta bort telefonnummer och e-postadresser\n'
+        f'- Ta bort URLs UTOM: {portfolio}\n'
+        f'- Ta bort tomma rader i slutet\n'
+        f'- Ändra INGET annat — returnera bara den städade texten, ingen kommentar\n\n'
+        f'Brev:\n{letter}'
+    )
+    cleaned = await llm_client.complete(prompt)
+    cleaned = _strip_stray_unicode(cleaned.rstrip())
+    result = await humanize(cleaned)
+    banned = _flag_banned(result)
+    if banned:
+        logger.warning("Banned phrases still in letter after humanize: %s", banned)
+    return result

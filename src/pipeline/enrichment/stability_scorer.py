@@ -12,7 +12,7 @@ def _age_score(registration_date: str) -> float:
     try:
         year = int(registration_date[:4])
     except (ValueError, TypeError):
-        return 50.0
+        return 0.0
     age = _TODAY_YEAR - year
     if age >= 10:
         return 100.0
@@ -29,7 +29,7 @@ async def score_stability(company_name: str, city: str) -> float:
         data: CompanyApiData = await fetch_company(company_name, city)
     except Exception as exc:
         logger.warning("company_api failed for %s: %s", company_name, exc)
-        return 50.0
+        return 0.0
 
     # Inactive / deregistered company → very low score
     if not data.is_active:
@@ -49,4 +49,5 @@ async def score_stability(company_name: str, city: str) -> float:
     if scores:
         return round(sum(scores) / len(scores), 2)
 
-    return 50.0
+    # API svarade men inga datapunkter → kontrollerad men utan data
+    return 40.0

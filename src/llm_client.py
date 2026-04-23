@@ -1,10 +1,18 @@
 import asyncio
+import logging
 import os
 
 import httpx
-from dotenv import load_dotenv
 
-load_dotenv()
+from config import (
+    OPENROUTER_API_KEY,
+    OPENROUTER_MODEL,
+    ANTHROPIC_API_KEY,
+    ANTHROPIC_MODEL,
+    SITE_URL,
+)
+
+_log = logging.getLogger(__name__)
 
 
 async def complete(prompt: str) -> str:
@@ -13,7 +21,7 @@ async def complete(prompt: str) -> str:
         try:
             return await _claude_cli(prompt)
         except Exception as e:
-            print(f"[llm_client] claude-cli failed ({e}), falling back to OpenRouter")
+            _log.warning("claude-cli failed (%s), falling back to OpenRouter", e)
             return await _openrouter(prompt)
     if provider == "openrouter":
         return await _openrouter(prompt)
@@ -39,28 +47,29 @@ async def _claude_cli(prompt: str) -> str:
 
 
 async def _openrouter(prompt: str) -> str:
-    api_key = os.getenv("OPENROUTER_API_KEY", "")
-    model = os.getenv("OPENROUTER_MODEL", "minimax/minimax-01")
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}"},
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "HTTP-Referer": SITE_URL,
+                "X-Title": "LIA Leads Finder",
+            },
             json={
-                "model": model,
+                "model": OPENROUTER_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
             },
         )
-        resp.raise_for_status()
+        if not resp.is_success:
+            raise RuntimeError(f"OpenRouter {resp.status_code}: {resp.text[:300]}")
         return resp.json()["choices"][0]["message"]["content"]
 
 
 async def _anthropic(prompt: str) -> str:
     import anthropic as _anthropic_sdk
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
-    model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-    client = _anthropic_sdk.AsyncAnthropic(api_key=api_key)
+    client = _anthropic_sdk.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
     msg = await client.messages.create(
-        model=model,
+        model=ANTHROPIC_MODEL,
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )
