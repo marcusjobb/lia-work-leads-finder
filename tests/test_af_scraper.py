@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from pipeline.discovery.af_scraper import scrape_af
+from pipeline.discovery.af_scraper import scrape_af, _candidate_query_sets
 
 MOCK_RESPONSE = {
     "hits": [
@@ -144,3 +144,77 @@ async def test_always_fetches_from_offset_zero():
         await scrape_af(["Python"], "Göteborg")
 
     assert captured_params.get("offset") == 0
+
+
+# --- _candidate_query_sets ---
+
+def test_candidate_query_sets_single_term():
+    assert _candidate_query_sets(["C#"]) == [["C#"]]
+
+
+def test_candidate_query_sets_empty():
+    assert _candidate_query_sets([]) == [[]]
+
+
+def test_candidate_query_sets_three_terms_order():
+    candidates = _candidate_query_sets(["A", "B", "C"])
+    assert candidates[0] == ["A", "B", "C"]
+    # drop-one-term subsets (favoring dropping the last term first), then singles
+    assert candidates[1:4] == [["A", "B"], ["A", "C"], ["B", "C"]]
+    assert candidates[4:7] == [["A"], ["B"], ["C"]]
+
+
+# --- fallback when the full term combination returns zero hits ---
+
+@pytest.mark.asyncio
+async def test_falls_back_to_fewer_terms_when_combined_query_has_zero_hits():
+    """Regression: "C#, Yrkeshögskolelärare, programmering" returned 0 hits
+    from the real AF API because "Yrkeshögskolelärare" as one compound word
+    doesn't match anything, dragging the whole combined query to zero even
+    though "C#" alone has plenty of hits."""
+
+    async def capture_get(url, **kwargs):
+        q = kwargs.get("params", {}).get("q", "")
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        if "Yrkeshögskolelärare" in q:
+            mock_response.json.return_value = {"total": {"value": 0}, "hits": []}
+        else:
+            mock_response.json.return_value = {
+                "total": {"value": 34},
+                "hits": [{
+                    "headline": "C# Developer",
+                    "employer": {"name": "Acme AB"},
+                    "workplace_address": {"city": "Göteborg"},
+                    "webpage_url": "https://example.com/job/1",
+                }],
+            }
+        return mock_response
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(side_effect=capture_get))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        results, total = await scrape_af(["C#", "Yrkeshögskolelärare", "programmering"], "Göteborg")
+
+    assert total == 34
+    assert len(results) == 1
+    assert results[0].name == "Acme AB"
+
+
+@pytest.mark.asyncio
+async def test_returns_zero_result_when_every_subset_is_empty():
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {"total": {"value": 0}, "hits": []}
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(return_value=mock_response))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        results, total = await scrape_af(["Nonexistent", "Termer"], "Göteborg")
+
+    assert total == 0
+    assert results == []
