@@ -10,6 +10,7 @@ class SearchConfig(BaseModel):
     radius_km: int = 0
     page: int = 1
     page_size: int = 10
+    search_mode: Literal["lia", "junior", "senior"] = "lia"
 
 
 class CompanyRaw(BaseModel):
@@ -61,6 +62,7 @@ class LeadProfile(BaseModel):
     score_breakdown: ScoreBreakdown
     match_reason: str
     tier: Literal["STRONG", "GOOD", "WEAK", "SKIP"]
+    search_mode: Literal["lia", "junior", "senior"] = "lia"
     # Stability context (populated after API enrichment)
     registration_date: str | None = None
     employee_range: str | None = None

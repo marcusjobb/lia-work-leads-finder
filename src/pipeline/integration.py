@@ -27,7 +27,7 @@ def _assemble(
     tech_score = analyze_tech(config.tech_stack, analysis_text)
     if geo_score is None:
         geo_score = score_geo(company.city, config.city, config.all_sweden)
-    seniority_score = score_seniority(analysis_text)
+    seniority_score = score_seniority(analysis_text, config.search_mode)
     breakdown = ScoreBreakdown(
         tech_match=tech_score,
         geo=geo_score,
@@ -59,6 +59,7 @@ def _assemble(
         score_breakdown=breakdown,
         match_reason=", ".join(reason_parts) or "Generell matchning",
         tier=tier,
+        search_mode=config.search_mode,
         registration_date=registration_date,
         employee_range=employee_range,
         is_active=is_active,

@@ -53,11 +53,12 @@ Profil → Discovery → Enrichment → Scoring → Resultat → Ansökningsbrev
 
 | Dimension | Vikt |
 |-----------|------|
-| Tech-match | 35% |
-| Senioritet | 20% |
-| Kontaktbarhet | 20% |
-| Aktivitet | 15% |
-| Stabilitet | 10% |
+| Tech-match | 30% |
+| Geo | 25% |
+| Senioritet | 15% |
+| Kontaktbarhet | 15% |
+| Aktivitet | 10% |
+| Stabilitet | 5% |
 
 Tier-trösklar: **STRONG** ≥70 · **GOOD** 50–69 · **WEAK** 30–49 · **SKIP** <30
 

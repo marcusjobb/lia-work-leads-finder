@@ -6,6 +6,10 @@ def parse_config(form_data: dict) -> SearchConfig:
     raw_stack = form_data.get("tech_stack", "")
     tech_stack = [t.strip() for t in raw_stack.split(",") if t.strip()]
 
+    search_mode = form_data.get("search_mode", "lia")
+    if search_mode not in ("lia", "junior", "senior"):
+        search_mode = "lia"
+
     return SearchConfig(
         city=form_data.get("city", "").strip(),
         tech_stack=tech_stack,
@@ -14,4 +18,5 @@ def parse_config(form_data: dict) -> SearchConfig:
         radius_km=int(form_data.get("radius_km", 0)),
         page=int(form_data.get("page", 1)),
         page_size=int(form_data.get("page_size", 10)),
+        search_mode=search_mode,
     )

@@ -21,3 +21,23 @@ def test_all_sweden_absent():
 def test_empty_program_url():
     config = parse_config({"city": "Uppsala", "tech_stack": "Java", "program_url": ""})
     assert config.program_url is None
+
+
+def test_search_mode_defaults_to_lia():
+    config = parse_config({"city": "Göteborg", "tech_stack": "Java"})
+    assert config.search_mode == "lia"
+
+
+def test_search_mode_senior():
+    config = parse_config({"city": "Göteborg", "tech_stack": "Java", "search_mode": "senior"})
+    assert config.search_mode == "senior"
+
+
+def test_search_mode_junior():
+    config = parse_config({"city": "Göteborg", "tech_stack": "Java", "search_mode": "junior"})
+    assert config.search_mode == "junior"
+
+
+def test_search_mode_invalid_falls_back_to_lia():
+    config = parse_config({"city": "Göteborg", "tech_stack": "Java", "search_mode": "bogus"})
+    assert config.search_mode == "lia"

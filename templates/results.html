@@ -8,7 +8,8 @@
 </head>
 <body>
   <main class="container">
-    <h1>LIA-leads för {{ config.tech_stack | join(", ") }}{% if config.all_sweden %} i hela Sverige{% elif config.city %} i {{ config.city }}{% if config.radius_km > 0 %} ±{{ config.radius_km }} km{% endif %}{% endif %}</h1>
+    {% set mode_label = {"lia": "LIA-leads", "junior": "Juniora jobb", "senior": "Seniora jobb"}[config.search_mode] %}
+    <h1>{{ mode_label }} för {{ config.tech_stack | join(", ") }}{% if config.all_sweden %} i hela Sverige{% elif config.city %} i {{ config.city }}{% if config.radius_km > 0 %} ±{{ config.radius_km }} km{% endif %}{% endif %}</h1>
     <div class="top-actions">
       <a href="/" class="back-link">← Ny sökning</a>
       {% if profiles %}<a href="/export-leads" class="btn-export">Exportera leads (.xlsx)</a>{% endif %}
@@ -21,6 +22,7 @@
       <form method="post" action="/search" style="display:inline">
         <input type="hidden" name="city" value="{{ config.city }}">
         <input type="hidden" name="tech_stack" value="{{ config.tech_stack | join(', ') }}">
+        <input type="hidden" name="search_mode" value="{{ config.search_mode }}">
         {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
         <input type="hidden" name="page" value="{{ page - 1 }}">
         <input type="hidden" name="page_size" value="{{ page_size }}">
@@ -34,6 +36,7 @@
       <form method="post" action="/search" style="display:inline">
         <input type="hidden" name="city" value="{{ config.city }}">
         <input type="hidden" name="tech_stack" value="{{ config.tech_stack | join(', ') }}">
+        <input type="hidden" name="search_mode" value="{{ config.search_mode }}">
         {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
         <input type="hidden" name="radius_km" value="{{ config.radius_km }}">
         <input type="hidden" name="page_size" value="{{ page_size }}">
@@ -47,6 +50,7 @@
       <form method="post" action="/search" style="display:inline">
         <input type="hidden" name="city" value="{{ config.city }}">
         <input type="hidden" name="tech_stack" value="{{ config.tech_stack | join(', ') }}">
+        <input type="hidden" name="search_mode" value="{{ config.search_mode }}">
         {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
         <input type="hidden" name="page" value="1">
         <select name="page_size" class="select-page-size" onchange="this.form.submit()">
@@ -60,6 +64,7 @@
       <form method="post" action="/search" style="display:inline">
         <input type="hidden" name="city" value="{{ config.city }}">
         <input type="hidden" name="tech_stack" value="{{ config.tech_stack | join(', ') }}">
+        <input type="hidden" name="search_mode" value="{{ config.search_mode }}">
         {% if config.all_sweden %}<input type="hidden" name="all_sweden" value="on">{% endif %}
         <input type="hidden" name="page" value="{{ page + 1 }}">
         <input type="hidden" name="page_size" value="{{ page_size }}">
@@ -102,9 +107,10 @@
             <div class="score-bars">
               {% set bars = [
                 ("Tech",       p.score_breakdown.tech_match, "Hur väl företagets tech stack matchar din. Vikt: 30%."),
+                ("Geo",        p.score_breakdown.geo,        "Avstånd till sökt stad. Vikt: 25%."),
+                ("Senioritet", p.score_breakdown.seniority,  "Matchar annonsen ditt valda sökläge (" ~ mode_label ~ ")? Vikt: 15%."),
                 ("Kontakt",    p.score_breakdown.contact,    "Om kontaktinfo finns (e-post, LinkedIn, karriärsida). Vikt: 15%."),
                 ("Aktivitet",  p.score_breakdown.activity,   "Tecken på aktiv rekrytering (jobbannonser, nyheter). Vikt: 10%."),
-                ("Senioritet", p.score_breakdown.seniority,  "Söker företaget juniora roller? Högre = mer juniorvänligt. Vikt: 15%."),
                 ("Stabilitet", p.score_breakdown.stability,  "Bolagets storlek och ålder som indikator på stabilitet. Vikt: 5%."),
               ] %}
               {% for label, val, tip in bars %}

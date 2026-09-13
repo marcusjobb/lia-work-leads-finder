@@ -13,8 +13,14 @@ def test_compute_score_perfect():
 
 def test_compute_score_weighted():
     bd = ScoreBreakdown(tech_match=100, geo=0, contact=0, activity=0, stability=0, seniority=0)
-    # Only tech_match (35%) contributes
-    assert abs(compute_score(bd) - 35.0) < 0.01
+    # Only tech_match (30%) contributes
+    assert abs(compute_score(bd) - 30.0) < 0.01
+
+
+def test_compute_score_geo_contributes():
+    bd = ScoreBreakdown(tech_match=0, geo=100, contact=0, activity=0, stability=0, seniority=0)
+    # Only geo (25%) contributes
+    assert abs(compute_score(bd) - 25.0) < 0.01
 
 
 def test_assign_tier():

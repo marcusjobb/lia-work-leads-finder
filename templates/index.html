@@ -11,11 +11,18 @@
     <div class="page-header">
       <div>
         <h1>LIA Leads Finder</h1>
-        <p class="subtitle">Hitta LIA-företag som matchar din tech stack</p>
+        <p class="subtitle" id="subtitle">Hitta LIA-företag som matchar din tech stack</p>
       </div>
       <a href="/profile" class="btn-profile">Min profil</a>
     </div>
     <form method="post" action="/search" class="search-form">
+      <label for="search_mode">Vad söker du?</label>
+      <select id="search_mode" name="search_mode" onchange="updateModeCopy(this)">
+        <option value="lia">LIA/praktik</option>
+        <option value="junior">Jobb — Junior</option>
+        <option value="senior">Jobb — Senior</option>
+      </select>
+
       <label for="city">Stad</label>
       <div class="city-row">
         <input type="text" id="city" name="city" placeholder="t.ex. Göteborg">
@@ -52,6 +59,16 @@
     </form>
   </main>
   <script>
+    const MODE_COPY = {
+      lia: { subtitle: "Hitta LIA-företag som matchar din tech stack", button: "Hitta LIA-företag" },
+      junior: { subtitle: "Hitta juniora jobb som matchar din tech stack", button: "Hitta juniora jobb" },
+      senior: { subtitle: "Hitta seniora jobb som matchar din tech stack", button: "Hitta seniora jobb" },
+    };
+    function updateModeCopy(select) {
+      const copy = MODE_COPY[select.value] || MODE_COPY.lia;
+      document.getElementById('subtitle').textContent = copy.subtitle;
+      document.getElementById('btn-text').textContent = copy.button;
+    }
     function toggleCity(cb) {
       const cityInput = document.getElementById('city');
       cityInput.disabled = cb.checked;

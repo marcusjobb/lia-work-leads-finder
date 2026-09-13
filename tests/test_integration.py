@@ -61,3 +61,29 @@ def test_recent_date_uses_high_activity():
                          publication_date=date.today().isoformat())
     profile = build_profile(company, SearchConfig(city="Göteborg", tech_stack=["Python"]))
     assert profile.score_breakdown.activity == 100.0
+
+
+def test_search_mode_defaults_to_lia_and_scores_senior_ad_low():
+    company = CompanyRaw(name="Sigma AB", city="Göteborg", source="af",
+                         job_title="Senior Python Engineer")
+    config = SearchConfig(city="Göteborg", tech_stack=["Python"])
+    profile = build_profile(company, config)
+    assert profile.search_mode == "lia"
+    assert profile.score_breakdown.seniority == 10.0
+
+
+def test_search_mode_senior_scores_senior_ad_high_and_is_persisted():
+    company = CompanyRaw(name="Sigma AB", city="Göteborg", source="af",
+                         job_title="Senior Python Engineer")
+    config = SearchConfig(city="Göteborg", tech_stack=["Python"], search_mode="senior")
+    profile = build_profile(company, config)
+    assert profile.search_mode == "senior"
+    assert profile.score_breakdown.seniority == 100.0
+
+
+def test_search_mode_senior_scores_junior_ad_low():
+    company = CompanyRaw(name="Sigma AB", city="Göteborg", source="af",
+                         job_title="Junior Python Developer, trainee program")
+    config = SearchConfig(city="Göteborg", tech_stack=["Python"], search_mode="senior")
+    profile = build_profile(company, config)
+    assert profile.score_breakdown.seniority == 10.0

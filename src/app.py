@@ -258,7 +258,7 @@ async def enrich_lead(request: Request):
         job_title=profile.job_title,
         job_url=profile.job_url,
     )
-    config = SearchConfig(city=profile.city, tech_stack=profile.tech_tags or [""])
+    config = SearchConfig(city=profile.city, tech_stack=profile.tech_tags or [""], search_mode=profile.search_mode)
     enriched_profile = await build_profile_async(raw, config)
 
     profiles = _load_profiles()
