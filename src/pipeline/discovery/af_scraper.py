@@ -1,4 +1,5 @@
 import logging
+from itertools import combinations
 
 import httpx
 
@@ -12,13 +13,48 @@ HEADERS = {"Accept": "application/json"}
 PAGE_SIZE = 10
 
 
+def _candidate_query_sets(query_parts: list[str]) -> list[list[str]]:
+    """Full term set first, then progressively smaller subsets.
+
+    A single rare/narrow term (e.g. a long Swedish compound word AF's search
+    doesn't decompose, like "Yrkeshögskolelärare") can silently zero out an
+    otherwise good combined query. Subsets are tried dropping one term at a
+    time (favoring dropping the last term first), then down to each term
+    alone, so scrape_af can fall back instead of just returning nothing.
+    """
+    n = len(query_parts)
+    if n == 0:
+        return [[]]
+    candidates = [list(query_parts)]
+    for size in range(n - 1, 0, -1):
+        for combo in combinations(range(n), size):
+            candidates.append([query_parts[i] for i in combo])
+    return candidates
+
+
 async def scrape_af(
     tech_stack: list[str], city: str, all_sweden: bool = False,
     radius_km: int = 0, limit: int = 100,
 ) -> tuple[list[CompanyRaw], int]:
-    """Search Arbetsförmedlingen JobSearch API. Returns (companies, total_hits)."""
+    """Search Arbetsförmedlingen JobSearch API. Returns (companies, total_hits).
+
+    Falls back to smaller subsets of the search terms if the full
+    combination returns zero hits (see _candidate_query_sets)."""
     query_parts = tech_stack[:3]
 
+    last_result: tuple[list[CompanyRaw], int] = ([], 0)
+    for candidate in _candidate_query_sets(query_parts):
+        companies, total = await _search_af(candidate, city, all_sweden, radius_km, limit)
+        last_result = (companies, total)
+        if total > 0:
+            return companies, total
+    return last_result
+
+
+async def _search_af(
+    query_parts: list[str], city: str, all_sweden: bool, radius_km: int, limit: int,
+) -> tuple[list[CompanyRaw], int]:
+    """One AF search attempt for the given query terms."""
     params: dict = {
         "q": " ".join(query_parts),
         "offset": 0,
