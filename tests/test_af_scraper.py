@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from pipeline.discovery.af_scraper import scrape_af, _candidate_query_tiers
+from pipeline.discovery.af_scraper import scrape_af, _candidate_query_tiers, _split_sticky_terms
 
 MOCK_RESPONSE = {
     "hits": [
@@ -162,6 +162,70 @@ def test_candidate_query_tiers_three_terms_order():
     # drop-one-term subsets (favoring dropping the last term first), then singles
     assert tiers[1] == [["A", "B"], ["A", "C"], ["B", "C"]]
     assert tiers[2] == [["A"], ["B"], ["C"]]
+
+
+# --- Google-style +required/-excluded prefixes ---
+
+def test_split_sticky_terms():
+    droppable, sticky = _split_sticky_terms(["yh", "+yh", "-java", "C#"])
+    assert droppable == ["yh", "C#"]
+    assert sticky == ["+yh", "-java"]
+
+
+def test_split_sticky_terms_none():
+    droppable, sticky = _split_sticky_terms(["yh", "C#"])
+    assert droppable == ["yh", "C#"]
+    assert sticky == []
+
+
+@pytest.mark.asyncio
+async def test_sticky_terms_always_included_in_every_attempt():
+    """+/- terms must survive every fallback attempt — including the full
+    query, drop-one subsets, and the single-term merge tier — never
+    dropped and never queried on their own as an independent topic."""
+    captured_qs: list[str] = []
+
+    async def capture_get(url, **kwargs):
+        q = kwargs.get("params", {}).get("q", "")
+        captured_qs.append(q)
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {"total": {"value": 0}, "hits": []}
+        return mock_response
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(side_effect=capture_get))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        await scrape_af(["yh", "lärare", "-java"], "", all_sweden=True)
+
+    assert captured_qs  # sanity: at least one attempt was made
+    assert all("-java" in q for q in captured_qs)
+
+
+@pytest.mark.asyncio
+async def test_sticky_only_terms_make_a_single_query():
+    """tech_stack of only +/- terms has nothing droppable to fall back on
+    — it's just one query, not treated as independent single terms."""
+    call_count = 0
+
+    async def capture_get(url, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {"total": {"value": 0}, "hits": []}
+        return mock_response
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(side_effect=capture_get))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        await scrape_af(["+yh", "-java"], "", all_sweden=True)
+
+    assert call_count == 1
 
 
 # --- fallback when the full term combination returns zero hits ---
