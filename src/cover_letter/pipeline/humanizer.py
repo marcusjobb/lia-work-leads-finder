@@ -1,7 +1,19 @@
 import llm_client
 
 
-async def humanize(letter: str) -> str:
+_CLOSING_REWRITE_HINT = {
+    "lia": "'Studierna har gett...', 'En LIA-praktik hos er ger möjlighet att...'",
+    "junior": "'Erfarenheten från X har gett...', 'En tjänst hos er ger möjlighet att...'",
+    "senior": "'Rollen som X innebar...', 'En tjänst hos er skulle innebära...'",
+}
+_CLOSING_TOPIC = {
+    "lia": "vad studenten vill åstadkomma under LIA",
+    "junior": "vad sökande vill bidra med och lära sig i rollen",
+    "senior": "vad sökande vill åstadkomma och bidra med i rollen",
+}
+
+
+async def humanize(letter: str, search_mode: str = "lia") -> str:
     """Make AI-generated letter feel more naturally written."""
     prompt = (
         "Du är en redaktör. Bearbeta detta ansökningsbrev så att det låter som skrivet av en människa.\n\n"
@@ -15,13 +27,13 @@ async def humanize(letter: str) -> str:
         "- Portfolio-mening: om den är vag ('visar mitt intresse', 'utforska och implementera') — "
         "ersätt med en konkret mening om vad som faktiskt finns i repot\n"
         "- Ersätt em-streck (–) med komma eller punkt\n"
-        "- Byt ut 'vi' mot 'jag' när subjektet är den sökande studenten\n"
+        "- Byt ut 'vi' mot 'jag' när subjektet är den sökande\n"
         "- Reducera antalet meningar som börjar med 'Jag' — målet är max 4-5 'jag' totalt i hela brevet. "
-        "Omformulera genom att sätta ämnet/handlingen först: 'Erfarenheten som X har lärt mig...', "
-        "'Studierna har gett...', 'En LIA-praktik hos er ger möjlighet att...'\n"
+        f"Omformulera genom att sätta ämnet/handlingen först: 'Erfarenheten som X har lärt mig...', "
+        f"{_CLOSING_REWRITE_HINT[search_mode]}\n"
         "- Ta bort upprepning av samma ord inom samma mening\n"
         "- Om sista stycket börjar med 'Tack för att ni läser' — ta bort den meningen\n"
-        "- Om brevet slutar med 'ser fram emot att höra från er' — ersätt med en konkret mening om vad studenten vill åstadkomma under LIA\n"
+        f"- Om brevet slutar med 'ser fram emot att höra från er' — ersätt med en konkret mening om {_CLOSING_TOPIC[search_mode]}\n"
         "- Behåll alla fakta, namn, tekniktermer och URLs exakt som de är\n"
         "- Ändra INTE strukturen (antal stycken, hälsningsfras)\n"
         "- Returnera bara den bearbetade texten, ingen kommentar\n\n"

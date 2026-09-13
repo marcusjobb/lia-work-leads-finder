@@ -310,7 +310,7 @@ async def generate_letter_route(request: Request):
 
     try:
         research = await research_company(lead)
-        letter = await generate_letter(student, research)
+        letter = await generate_letter(student, research, lead.search_mode)
         _save_letter(company_name, letter)
         _save_research(company_name, research)
 
@@ -348,7 +348,7 @@ async def fix_letter_route(request: Request):
         lang_before = await validate_language(current_letter, research.detected_language)
         warnings_before = tone_before.issues + ([] if lang_before.ok else [f"Språk: förväntat {lang_before.expected}, fick {lang_before.detected}"])
 
-        letter = await fix_letter(current_letter, warnings_before, research, student)
+        letter = await fix_letter(current_letter, warnings_before, research, student, lead.search_mode)
         _save_letter(company_name, letter)
 
         tone = await validate_tone(letter, research)

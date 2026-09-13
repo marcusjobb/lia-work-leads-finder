@@ -34,7 +34,7 @@ def _flag_banned(text: str) -> list[str]:
     return found
 
 
-async def postprocess(letter: str, student: StudentProfile) -> str:
+async def postprocess(letter: str, student: StudentProfile, search_mode: str = "lia") -> str:
     portfolio = student.portfolio_url or "inga"
     prompt = (
         f'Städa detta ansökningsbrev:\n'
@@ -46,7 +46,7 @@ async def postprocess(letter: str, student: StudentProfile) -> str:
     )
     cleaned = await llm_client.complete(prompt)
     cleaned = _strip_stray_unicode(cleaned.rstrip())
-    result = await humanize(cleaned)
+    result = await humanize(cleaned, search_mode)
     banned = _flag_banned(result)
     if banned:
         logger.warning("Banned phrases still in letter after humanize: %s", banned)

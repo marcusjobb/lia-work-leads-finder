@@ -16,14 +16,18 @@ def _load_example_letter() -> str | None:
     return path.read_text() if path.exists() else None
 
 
-async def generate_letter(student: StudentProfile, research: CompanyResearch) -> str:
+async def generate_letter(student: StudentProfile, research: CompanyResearch, search_mode: str = "lia") -> str:
     template = _env.get_template("letter_prompt.jinja2")
-    prompt = template.render(student=student, research=research, example_letter=_load_example_letter())
+    prompt = template.render(
+        student=student, research=research, example_letter=_load_example_letter(), search_mode=search_mode
+    )
     raw = await llm_client.complete(prompt)
-    return await postprocess(raw, student)
+    return await postprocess(raw, student, search_mode)
 
 
-async def fix_letter(letter: str, warnings: list[str], research: CompanyResearch, student: StudentProfile) -> str:
+async def fix_letter(
+    letter: str, warnings: list[str], research: CompanyResearch, student: StudentProfile, search_mode: str = "lia"
+) -> str:
     issues = "\n".join(f"- {w}" for w in warnings)
     company_ctx = research.about_text[:200] if research.about_text else ""
     values_ctx = ", ".join(research.values) if research.values else ""
@@ -37,4 +41,4 @@ async def fix_letter(letter: str, warnings: list[str], research: CompanyResearch
         + f"\nBrev:\n{letter}"
     )
     raw = await llm_client.complete(prompt)
-    return await postprocess(raw, student)
+    return await postprocess(raw, student, search_mode)
