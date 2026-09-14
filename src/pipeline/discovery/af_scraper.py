@@ -32,6 +32,9 @@ def _candidate_query_sets(query_parts: list[str]) -> list[list[str]]:
     return candidates
 
 
+_MIN_RESULTS_THRESHOLD = 5
+
+
 async def scrape_af(
     tech_stack: list[str], city: str, all_sweden: bool = False,
     radius_km: int = 0, limit: int = 100,
@@ -39,16 +42,21 @@ async def scrape_af(
     """Search Arbetsförmedlingen JobSearch API. Returns (companies, total_hits).
 
     Falls back to smaller subsets of the search terms if the full
-    combination returns zero hits (see _candidate_query_sets)."""
+    combination returns fewer than _MIN_RESULTS_THRESHOLD hits (see
+    _candidate_query_sets) — a single rare/narrow term can drag an
+    otherwise-good combined query down to just 1-2 hits without hitting
+    zero. Returns the best subset seen if none clear the threshold (e.g.
+    tech_stack has only one term, or every subset is genuinely narrow)."""
     query_parts = tech_stack[:3]
 
-    last_result: tuple[list[CompanyRaw], int] = ([], 0)
+    best_result: tuple[list[CompanyRaw], int] | None = None
     for candidate in _candidate_query_sets(query_parts):
         companies, total = await _search_af(candidate, city, all_sweden, radius_km, limit)
-        last_result = (companies, total)
-        if total > 0:
+        if best_result is None or total > best_result[1]:
+            best_result = (companies, total)
+        if total >= _MIN_RESULTS_THRESHOLD:
             return companies, total
-    return last_result
+    return best_result
 
 
 async def _search_af(
