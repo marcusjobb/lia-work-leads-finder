@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from pipeline.discovery.af_scraper import scrape_af, _candidate_query_sets
+from pipeline.discovery.af_scraper import scrape_af, _candidate_query_tiers
 
 MOCK_RESPONSE = {
     "hits": [
@@ -146,22 +146,22 @@ async def test_always_fetches_from_offset_zero():
     assert captured_params.get("offset") == 0
 
 
-# --- _candidate_query_sets ---
+# --- _candidate_query_tiers ---
 
-def test_candidate_query_sets_single_term():
-    assert _candidate_query_sets(["C#"]) == [["C#"]]
-
-
-def test_candidate_query_sets_empty():
-    assert _candidate_query_sets([]) == [[]]
+def test_candidate_query_tiers_single_term():
+    assert _candidate_query_tiers(["C#"]) == [[["C#"]]]
 
 
-def test_candidate_query_sets_three_terms_order():
-    candidates = _candidate_query_sets(["A", "B", "C"])
-    assert candidates[0] == ["A", "B", "C"]
+def test_candidate_query_tiers_empty():
+    assert _candidate_query_tiers([]) == [[[]]]
+
+
+def test_candidate_query_tiers_three_terms_order():
+    tiers = _candidate_query_tiers(["A", "B", "C"])
+    assert tiers[0] == [["A", "B", "C"]]
     # drop-one-term subsets (favoring dropping the last term first), then singles
-    assert candidates[1:4] == [["A", "B"], ["A", "C"], ["B", "C"]]
-    assert candidates[4:7] == [["A"], ["B"], ["C"]]
+    assert tiers[1] == [["A", "B"], ["A", "C"], ["B", "C"]]
+    assert tiers[2] == [["A"], ["B"], ["C"]]
 
 
 # --- fallback when the full term combination returns zero hits ---
@@ -283,6 +283,101 @@ async def test_returns_best_subset_when_none_clear_threshold():
     assert total == 3
     assert len(results) == 1
     assert results[0].name == "Niche AB"
+
+
+@pytest.mark.asyncio
+async def test_merges_independent_single_terms_when_combo_never_co_occurs():
+    """Regression: "java, lärare" and "lärare, java" gave completely
+    different results — whichever term was listed/tried first "won" and
+    silently hid the other term's results, because the combined query has
+    0 hits and the old fallback stopped at the first single term clearing
+    the threshold. Both orderings must now return the same merged set."""
+
+    async def capture_get(url, **kwargs):
+        q = kwargs.get("params", {}).get("q", "")
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        if "java" in q and "lärare" in q:
+            total, hits = 0, []
+        elif "java" in q:
+            total, hits = 43, [{
+                "headline": "Java Developer", "employer": {"name": "JavaCo AB"},
+                "workplace_address": {"city": "Göteborg"}, "webpage_url": "https://example.com/java",
+            }]
+        else:
+            total, hits = 94, [{
+                "headline": "Lärare", "employer": {"name": "Skolan AB"},
+                "workplace_address": {"city": "Göteborg"}, "webpage_url": "https://example.com/larare",
+            }]
+        mock_response.json.return_value = {"total": {"value": total}, "hits": hits}
+        return mock_response
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(side_effect=capture_get))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        results_a, total_a = await scrape_af(["java", "lärare"], "Göteborg", all_sweden=True)
+        results_b, total_b = await scrape_af(["lärare", "java"], "Göteborg", all_sweden=True)
+
+    for results, total in [(results_a, total_a), (results_b, total_b)]:
+        assert total == 43 + 94
+        assert {c.name for c in results} == {"JavaCo AB", "Skolan AB"}
+
+
+@pytest.mark.asyncio
+async def test_merge_gives_each_term_an_even_share_of_limit():
+    """Regression: merging used to fetch `limit` per term then truncate the
+    combined list afterward, so whichever term was queried first still
+    silently dominated the final results even though the total-hits count
+    had become order-independent. Each term must get its own share of
+    `limit` instead."""
+    captured_limits: list[int] = []
+
+    async def capture_get(url, **kwargs):
+        captured_limits.append(kwargs.get("params", {}).get("limit"))
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {"total": {"value": 0}, "hits": []}
+        return mock_response
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(side_effect=capture_get))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        await scrape_af(["java", "lärare"], "Göteborg", all_sweden=True, limit=20)
+
+    # 1 call for the combined query (0 hits) + 2 calls for the single terms,
+    # each capped at limit // 2 = 10
+    assert captured_limits[-2:] == [10, 10]
+
+
+@pytest.mark.asyncio
+async def test_merge_dedupes_by_job_url():
+    async def capture_get(url, **kwargs):
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {
+            "total": {"value": 1},
+            "hits": [{
+                "headline": "Same job seen twice",
+                "employer": {"name": "Acme AB"},
+                "workplace_address": {"city": "Göteborg"},
+                "webpage_url": "https://example.com/same-job",
+            }],
+        }
+        return mock_response
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(side_effect=capture_get))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        results, total = await scrape_af(["Alpha", "Beta"], "Göteborg", all_sweden=True)
+
+    # both single-term queries return the same ad — should be merged to one
+    assert len(results) == 1
 
 
 @pytest.mark.asyncio
