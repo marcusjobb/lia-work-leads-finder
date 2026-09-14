@@ -13,10 +13,24 @@ HEADERS = {"Accept": "application/json"}
 PAGE_SIZE = 10
 
 
-def _candidate_query_tiers(query_parts: list[str]) -> list[list[list[str]]]:
-    """Tiers of candidate query-term subsets, largest first: the full term
-    set, then each subset with one term dropped, ..., down to each term
-    alone as the last tier.
+def _split_sticky_terms(query_parts: list[str]) -> tuple[list[str], list[str]]:
+    """Split query terms into droppable (plain) and sticky ("+required" /
+    "-excluded") terms. AF's search natively understands a leading "-" as
+    exclusion (confirmed: "systemutvecklare -java" measurably drops
+    java-related ads) — a "+" prefix doesn't appear to change anything
+    but is accepted the same way for anyone used to Google-style syntax.
+    Sticky terms are modifiers, not independent topics: the fallback/merge
+    logic below must never drop them or treat them as their own
+    standalone single-term search."""
+    sticky = [t for t in query_parts if t.startswith(("+", "-"))]
+    droppable = [t for t in query_parts if not t.startswith(("+", "-"))]
+    return droppable, sticky
+
+
+def _candidate_query_tiers(droppable: list[str]) -> list[list[list[str]]]:
+    """Tiers of candidate subsets over the droppable terms only, largest
+    first: the full set, then each subset with one term dropped, ..., down
+    to each term alone as the last tier.
 
     A single rare/narrow term (e.g. a long Swedish compound word AF's search
     doesn't decompose, like "Yrkeshögskolelärare") can silently zero out an
@@ -24,12 +38,12 @@ def _candidate_query_tiers(query_parts: list[str]) -> list[list[list[str]]]:
     time (favoring dropping the last term first) before reaching single
     terms, so scrape_af can fall back instead of just returning nothing.
     """
-    n = len(query_parts)
+    n = len(droppable)
     if n == 0:
         return [[[]]]
-    tiers = [[list(query_parts)]]
+    tiers = [[list(droppable)]]
     for size in range(n - 1, 0, -1):
-        tiers.append([[query_parts[i] for i in combo] for combo in combinations(range(n), size)])
+        tiers.append([[droppable[i] for i in combo] for combo in combinations(range(n), size)])
     return tiers
 
 
@@ -42,29 +56,36 @@ async def scrape_af(
 ) -> tuple[list[CompanyRaw], int]:
     """Search Arbetsförmedlingen JobSearch API. Returns (companies, total_hits).
 
-    Falls back to smaller subsets of the search terms if the full
-    combination returns fewer than _MIN_RESULTS_THRESHOLD hits (see
-    _candidate_query_tiers). If it comes down to single terms that never
-    worked combined (e.g. "java" and "lärare" essentially never co-occur),
-    merges each term's own results instead of arbitrarily picking whichever
-    term the caller happened to list first — see _merged_single_term_results.
+    Supports Google-style "+required"/"-excluded" prefixes on any term (AF's
+    own search understands "-excluded" natively; see _split_sticky_terms).
+
+    Falls back to smaller subsets of the plain (non-prefixed) search terms
+    if the full combination returns fewer than _MIN_RESULTS_THRESHOLD hits
+    (see _candidate_query_tiers) — +/- terms are always kept in every
+    attempt. If it comes down to single terms that never worked combined
+    (e.g. "java" and "lärare" essentially never co-occur), merges each
+    term's own results instead of arbitrarily picking whichever term the
+    caller happened to list first — see _merged_single_term_results.
     Returns the best subset seen if nothing clears the threshold (e.g.
-    tech_stack has only one term, or every subset is genuinely narrow)."""
+    tech_stack has only one droppable term, or every subset is genuinely
+    narrow)."""
     query_parts = tech_stack[:3]
-    tiers = _candidate_query_tiers(query_parts)
+    droppable, sticky = _split_sticky_terms(query_parts)
+    tiers = _candidate_query_tiers(droppable)
 
     best_result: tuple[list[CompanyRaw], int] | None = None
     for tier_index, tier in enumerate(tiers):
         is_single_term_tier = (
             tier_index == len(tiers) - 1
-            and len(query_parts) > 1
+            and len(droppable) > 1
             and all(len(candidate) == 1 for candidate in tier)
         )
         if is_single_term_tier:
-            return await _merged_single_term_results(tier, city, all_sweden, radius_km, limit)
+            single_term_candidates = [candidate + sticky for candidate in tier]
+            return await _merged_single_term_results(single_term_candidates, city, all_sweden, radius_km, limit)
 
         for candidate in tier:
-            companies, total = await _search_af(candidate, city, all_sweden, radius_km, limit)
+            companies, total = await _search_af(candidate + sticky, city, all_sweden, radius_km, limit)
             if best_result is None or total > best_result[1]:
                 best_result = (companies, total)
             if total >= _MIN_RESULTS_THRESHOLD:
