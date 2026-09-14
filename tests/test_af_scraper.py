@@ -146,6 +146,58 @@ async def test_always_fetches_from_offset_zero():
     assert captured_params.get("offset") == 0
 
 
+# --- Google-style "exact phrase" quoting (AF's own API supports this
+# natively — a quoted multi-word term is passed straight through untouched
+# and is treated as one atomic droppable unit, never split word-by-word) ---
+
+@pytest.mark.asyncio
+async def test_quoted_phrase_passed_through_untouched():
+    captured_qs: list[str] = []
+
+    async def capture_get(url, **kwargs):
+        q = kwargs.get("params", {}).get("q", "")
+        captured_qs.append(q)
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {"total": {"value": 18}, "hits": []}
+        return mock_response
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(side_effect=capture_get))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        await scrape_af(['"lärare i musik"'], "", all_sweden=True)
+
+    assert captured_qs[0] == '"lärare i musik"'
+
+
+@pytest.mark.asyncio
+async def test_quoted_phrase_never_split_by_fallback():
+    """A quoted phrase is one droppable term, not three words to recombine
+    — the fallback logic must treat it as a single atomic unit."""
+    captured_qs: list[str] = []
+
+    async def capture_get(url, **kwargs):
+        q = kwargs.get("params", {}).get("q", "")
+        captured_qs.append(q)
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {"total": {"value": 0}, "hits": []}
+        return mock_response
+
+    with patch("pipeline.discovery.af_scraper.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(
+            return_value=MagicMock(get=AsyncMock(side_effect=capture_get))
+        )
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+        await scrape_af(['"lärare i musik"', "Java"], "", all_sweden=True)
+
+    # only 2 candidates possible for 2 droppable terms: the full combo, then
+    # each term alone — never a query with the phrase broken into loose words
+    assert all(q in ('"lärare i musik" Java', '"lärare i musik"', "Java") for q in captured_qs)
+
+
 # --- _candidate_query_tiers ---
 
 def test_candidate_query_tiers_single_term():
