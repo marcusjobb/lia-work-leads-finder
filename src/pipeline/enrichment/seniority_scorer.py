@@ -66,7 +66,7 @@ def _signals_in(text: str) -> tuple[bool, bool]:
     return bool(_JUNIOR_PATTERN.search(text)), bool(_SENIOR_PATTERN.search(text))
 
 
-SearchMode = Literal["lia", "junior", "senior"]
+SearchMode = Literal["lia", "junior", "senior", "any"]
 
 
 def score_seniority(title: str, description: str = "", mode: SearchMode = "lia") -> float:
@@ -74,6 +74,10 @@ def score_seniority(title: str, description: str = "", mode: SearchMode = "lia")
 
     mode="lia"/"junior": 100=junior/LIA signal, 10=senior signal, 50=neutral. Junior wins on tie.
     mode="senior": mirrored — 100=senior signal, 10=junior/LIA signal, 50=neutral. Senior wins on tie.
+    mode="any": always neutral (50) — for roles where junior/senior framing
+    doesn't apply (e.g. a teacher who happens to teach Java isn't "senior"
+    or "junior" in the developer sense), so seniority language in the ad
+    shouldn't affect the score either way.
 
     Resolved in three tiers, each trusted only if it unambiguously says
     junior-or-senior (not both, not neither):
@@ -87,6 +91,9 @@ def score_seniority(title: str, description: str = "", mode: SearchMode = "lia")
        positive of a senior ad that mentions "utöver praktik och
        internships" or "mentor junior engineers" deep in the body.
     """
+    if mode == "any":
+        return 50.0
+
     title = title or ""
     description = description or ""
 

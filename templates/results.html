@@ -8,7 +8,7 @@
 </head>
 <body>
   <main class="container">
-    {% set mode_label = {"lia": "LIA-leads", "junior": "Juniora jobb", "senior": "Seniora jobb"}[config.search_mode] %}
+    {% set mode_label = {"lia": "LIA-leads", "junior": "Juniora jobb", "senior": "Seniora jobb", "any": "Jobb"}[config.search_mode] %}
     <h1>{{ mode_label }} för {{ config.tech_stack | join(", ") }}{% if config.all_sweden %} i hela Sverige{% elif config.city %} i {{ config.city }}{% if config.radius_km > 0 %} ±{{ config.radius_km }} km{% endif %}{% endif %}</h1>
     <div class="top-actions">
       <a href="/" class="back-link">← Ny sökning</a>

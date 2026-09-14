@@ -1,9 +1,10 @@
-{% set role_word = {"lia": "YH-studenter", "junior": "personer i början av karriären", "senior": "erfarna yrkespersoner"}[search_mode] %}
-{% set goal_word = {"lia": "LIA-praktik", "junior": "en junior tjänst", "senior": "en tjänst som matchar deras erfarenhet"}[search_mode] %}
+{% set role_word = {"lia": "YH-studenter", "junior": "personer i början av karriären", "senior": "erfarna yrkespersoner", "any": "yrkespersoner"}[search_mode] %}
+{% set goal_word = {"lia": "LIA-praktik", "junior": "en junior tjänst", "senior": "en tjänst som matchar deras erfarenhet", "any": "en tjänst som matchar deras profil"}[search_mode] %}
 {% set closing_focus = {
   "lia": "vad studenten vill lära sig eller bygga under LIA-perioden",
   "junior": "vad sökande vill bidra med och lära sig i rollen",
   "senior": "vad sökande vill åstadkomma och bidra med i rollen",
+  "any": "vad sökande vill bidra med i rollen",
 }[search_mode] %}
 Du är en karriärrådgivare som hjälper {{ role_word }} skriva ansökningsbrev för {{ goal_word }}.
 

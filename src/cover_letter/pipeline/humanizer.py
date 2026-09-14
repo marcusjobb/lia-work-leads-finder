@@ -5,11 +5,13 @@ _CLOSING_REWRITE_HINT = {
     "lia": "'Studierna har gett...', 'En LIA-praktik hos er ger möjlighet att...'",
     "junior": "'Erfarenheten från X har gett...', 'En tjänst hos er ger möjlighet att...'",
     "senior": "'Rollen som X innebar...', 'En tjänst hos er skulle innebära...'",
+    "any": "'Erfarenheten från X har gett...', 'En tjänst hos er skulle innebära...'",
 }
 _CLOSING_TOPIC = {
     "lia": "vad studenten vill åstadkomma under LIA",
     "junior": "vad sökande vill bidra med och lära sig i rollen",
     "senior": "vad sökande vill åstadkomma och bidra med i rollen",
+    "any": "vad sökande vill bidra med i rollen",
 }
 
 

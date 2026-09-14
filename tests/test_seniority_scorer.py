@@ -156,3 +156,12 @@ def test_praktik_idiom_does_not_suppress_a_real_praktik_mention_elsewhere():
     title = "Utvecklare"
     description = "Vi jobbar med allt från strategi till praktik. Vi erbjuder också praktikplats för studerande."
     assert score_seniority(title, description) == 100.0
+
+# --- mode="any": seniority language shouldn't matter at all (e.g. a Java
+# teacher's search isn't about junior-vs-senior developer roles) ---
+
+def test_any_mode_is_always_neutral_regardless_of_signals():
+    assert score_seniority("Senior Java-lärare", "10+ års erfarenhet krävs", mode="any") == 50.0
+    assert score_seniority("Junior Java-lärare", "praktikplats finns", mode="any") == 50.0
+    assert score_seniority("Java-lärare", "", mode="any") == 50.0
+    assert score_seniority("", "", mode="any") == 50.0

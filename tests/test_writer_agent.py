@@ -100,3 +100,20 @@ async def test_junior_mode_prompt_does_not_mention_lia():
     prompt = captured_prompt[0]
     assert "LIA" not in prompt
     assert "junior tjänst" in prompt
+
+
+@pytest.mark.asyncio
+async def test_any_mode_prompt_does_not_mention_lia_or_seniority_level():
+    captured_prompt: list[str] = []
+
+    async def capture(prompt: str) -> str:
+        captured_prompt.append(prompt)
+        return "brev"
+
+    with patch("cover_letter.pipeline.writer_agent.llm_client.complete", new=capture):
+        await generate_letter(_make_student(), _make_research(), search_mode="any")
+
+    prompt = captured_prompt[0]
+    assert "LIA" not in prompt
+    assert "junior" not in prompt.lower()
+    assert "senior" not in prompt.lower()

@@ -7,7 +7,7 @@ def parse_config(form_data: dict) -> SearchConfig:
     tech_stack = [t.strip() for t in raw_stack.split(",") if t.strip()]
 
     search_mode = form_data.get("search_mode", "lia")
-    if search_mode not in ("lia", "junior", "senior"):
+    if search_mode not in ("lia", "junior", "senior", "any"):
         search_mode = "lia"
 
     return SearchConfig(
