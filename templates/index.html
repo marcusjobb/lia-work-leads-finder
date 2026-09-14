@@ -99,6 +99,16 @@
       document.getElementById('btn-text').hidden = true;
       document.getElementById('btn-spinner').hidden = false;
     });
+
+    // Navigating back (e.g. a mobile swipe-back) can restore this page from
+    // the browser's bfcache with the button still stuck in its "searching…"
+    // state from before — reset it whenever the page becomes visible again.
+    window.addEventListener('pageshow', function() {
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = false;
+      document.getElementById('btn-text').hidden = false;
+      document.getElementById('btn-spinner').hidden = true;
+    });
   </script>
 </body>
 </html>
